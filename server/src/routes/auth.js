@@ -148,6 +148,18 @@ router.post('/login', [
     }
 });
 
+// @route   POST /api/auth/logout
+// @desc    Logout user and clear session
+// @access  Public
+router.post('/logout', (req, res) => {
+    if (req.session) {
+        req.session.destroy();
+    }
+    req.logout(() => {
+        res.status(200).json({ message: 'Logged out successfully' });
+    });
+});
+
 // @route   GET /api/auth/user
 // @desc    Get user data
 // @access  Private

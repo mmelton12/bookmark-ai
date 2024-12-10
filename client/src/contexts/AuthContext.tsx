@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { User, AuthResponse, UserUpdateInput } from '../types';
@@ -6,6 +6,7 @@ import { User, AuthResponse, UserUpdateInput } from '../types';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -26,14 +27,29 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate('/login');
+  }, [navigate]);
+
+  // Handle initial auth state and social auth callback
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
+      
+      // If at login/signup page and already authenticated, redirect to dashboard
+      if (['/login', '/signup'].includes(location.pathname)) {
+        navigate('/dashboard');
+      }
     }
 
     // Handle social auth callback
@@ -45,15 +61,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .then((user) => {
             setUser(user);
             setIsAuthenticated(true);
-            navigate('/');
+            navigate('/dashboard');
           })
           .catch((error) => {
             console.error('Auth callback error:', error);
             navigate('/login');
+          })
+          .finally(() => {
+            setIsLoading(false);
           });
       }
+    } else {
+      setIsLoading(false);
     }
+  }, [location.pathname, location.search, navigate]);
 
+  // Check auth status when token changes
+  useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -62,38 +86,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const fetchUser = async () => {
-          try {
-            const response = await authAPI.getUser();
-            setUser(response);
-            setIsAuthenticated(true);
-            localStorage.setItem('user', JSON.stringify(response));
-          } catch (error) {
-            console.error('Error fetching user:', error);
-            handleLogout();
-          }
-        };
-
-        await fetchUser();
+        const response = await authAPI.getUser();
+        setUser(response);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(response));
       } catch (error) {
         console.error('Auth check failed:', error);
         handleLogout();
+      } finally {
+        setIsLoading(false);
       }
     };
 
     if (!location.pathname.startsWith('/auth/callback')) {
       checkAuthStatus();
     }
-  }, [navigate, location]);
+  }, [location.pathname, handleLogout]);
 
-  const handleAuthResponse = (response: AuthResponse) => {
+  const handleAuthResponse = useCallback((response: AuthResponse) => {
     const { token, user } = response;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     setUser(user);
     setIsAuthenticated(true);
-    navigate('/');
-  };
+    navigate('/dashboard');
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -111,14 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       throw error;
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-    navigate('/login');
   };
 
   const logout = async () => {
@@ -147,11 +156,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  if (isLoading) {
+    return null; // Or a loading spinner component
+  }
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated,
+        isLoading,
         login,
         signup,
         logout,

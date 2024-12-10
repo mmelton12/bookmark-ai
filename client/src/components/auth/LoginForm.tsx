@@ -65,7 +65,7 @@ const LoginForm: React.FC = () => {
 
     try {
       await login(email, password);
-      // No need to navigate here as it's handled in AuthContext
+      // Redirect is handled in AuthContext
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -83,7 +83,8 @@ const LoginForm: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5001/api/auth/google';
+    const serverUrl = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+    window.location.href = `${serverUrl}/auth/google`;
   };
 
   return (
