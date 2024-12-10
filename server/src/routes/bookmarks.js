@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
 const Bookmark = require('../models/Bookmark');
+const User = require('../models/User');
 const { analyzeContent } = require('../services/openai');
 const { fetchContent } = require('../utils/contentFetcher');
 const router = express.Router();
@@ -23,15 +24,19 @@ router.post('/', [
         const { url } = req.body;
         console.log('Creating bookmark for URL:', url);
 
+        // Get user's OpenAI API key
+        const user = await User.findById(req.user.id).select('+openAiKey');
+        const userApiKey = user?.openAiKey;
+
         try {
             // Fetch content from URL
             const { title, content, description } = await fetchContent(url);
             console.log('Content fetched successfully. Title:', title);
 
             try {
-                // Analyze content using OpenAI
+                // Analyze content using OpenAI with user's API key
                 console.log('Sending content to OpenAI for analysis...');
-                const { summary, tags } = await analyzeContent(url, content);
+                const { summary, tags } = await analyzeContent(url, content, userApiKey);
                 console.log('OpenAI analysis complete. Tags:', tags);
 
                 // Create bookmark with aiSummary field
@@ -54,6 +59,11 @@ router.post('/', [
                     status: aiError.response?.status
                 });
 
+                let warning = 'AI analysis partially failed. The bookmark was saved with limited analysis.';
+                if (!userApiKey) {
+                    warning = 'No OpenAI API key provided. Please add your API key in account settings.';
+                }
+
                 // Even if analysis fails, we should have received fallback tags from the service
                 const { summary = 'AI analysis failed. Please try again later.', tags = ['error', 'failed', 'retry', 'tag4', 'tag5'] } = aiError.result || {};
 
@@ -65,12 +75,12 @@ router.post('/', [
                     aiSummary: summary,
                     tags: tags,
                     user: req.user.id,
-                    warning: 'AI analysis partially failed. The bookmark was saved with limited analysis.'
+                    warning
                 });
 
                 res.status(201).json({
                     ...bookmark.toObject(),
-                    warning: 'AI analysis partially failed. The bookmark was saved with limited analysis.'
+                    warning
                 });
             }
         } catch (fetchError) {

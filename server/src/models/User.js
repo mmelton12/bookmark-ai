@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema({
     picture: {
         type: String
     },
+    openAiKey: {
+        type: String,
+        select: false // Don't include in regular queries for security
+    },
     createdAt: {
         type: Date,
         default: Date.now

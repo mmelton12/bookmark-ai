@@ -1,15 +1,17 @@
 const { Configuration, OpenAIApi } = require('openai');
 
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const createOpenAIClient = (apiKey) => {
+    const configuration = new Configuration({
+        apiKey: apiKey || process.env.OPENAI_API_KEY
+    });
+    return new OpenAIApi(configuration);
+};
 
-const openai = new OpenAIApi(configuration);
-
-exports.analyzeContent = async (url, content) => {
+exports.analyzeContent = async (url, content, userApiKey) => {
     try {
-        const summary = await this.generateSummary(content);
-        const tags = await this.generateTags(content);
+        const openai = createOpenAIClient(userApiKey);
+        const summary = await this.generateSummary(content, openai);
+        const tags = await this.generateTags(content, openai);
         return { summary, tags };
     } catch (error) {
         console.error('Error analyzing content:', error);
@@ -17,9 +19,9 @@ exports.analyzeContent = async (url, content) => {
     }
 };
 
-exports.generateTags = async (content) => {
+exports.generateTags = async (content, openaiClient) => {
     try {
-        const response = await openai.createChatCompletion({
+        const response = await openaiClient.createChatCompletion({
             model: "gpt-4",
             messages: [
                 {
@@ -43,9 +45,9 @@ exports.generateTags = async (content) => {
     }
 };
 
-exports.generateSummary = async (content) => {
+exports.generateSummary = async (content, openaiClient) => {
     try {
-        const response = await openai.createChatCompletion({
+        const response = await openaiClient.createChatCompletion({
             model: "gpt-4",
             messages: [
                 {

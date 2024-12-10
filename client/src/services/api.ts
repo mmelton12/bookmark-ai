@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { AuthResponse, Bookmark, SearchFilters, PaginatedResponse } from '../types';
+import { AuthResponse, Bookmark, SearchFilters, PaginatedResponse, User, UserUpdateInput } from '../types';
 
 // Hardcode the API URL since server is running on port 5001
 const API_URL = 'http://localhost:5001/api';
@@ -68,6 +68,32 @@ export const authAPI = {
         try {
             const response = await api.post<AuthResponse>('/auth/signup', { email, password });
             return response.data;
+        } catch (error) {
+            handleApiError(error);
+            throw error;
+        }
+    },
+    getUser: async (): Promise<User> => {
+        try {
+            const response = await api.get<User>('/auth/user');
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+            throw error;
+        }
+    },
+    updateProfile: async (data: UserUpdateInput): Promise<User> => {
+        try {
+            const response = await api.put<User>('/auth/profile', data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+            throw error;
+        }
+    },
+    updatePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+        try {
+            await api.put('/auth/password', { currentPassword, newPassword });
         } catch (error) {
             handleApiError(error);
             throw error;

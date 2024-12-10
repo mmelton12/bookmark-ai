@@ -4,6 +4,7 @@ export interface User {
   name?: string;
   picture?: string;
   googleId?: string;
+  openAiKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +74,7 @@ export interface ApiResponse<T> {
 export interface UserUpdateInput {
   name?: string;
   email?: string;
+  openAiKey?: string;
 }
 
 export interface PasswordUpdateInput {

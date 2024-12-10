@@ -25,8 +25,12 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  InputGroup,
+  InputRightElement,
+  IconButton,
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 
 const ChangePasswordModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -121,6 +125,8 @@ const AccountSettings: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [openAiKey, setOpenAiKey] = useState(user?.openAiKey || '');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -130,7 +136,7 @@ const AccountSettings: React.FC = () => {
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
-      await updateProfile({ name, email });
+      await updateProfile({ name, email, openAiKey });
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
@@ -187,6 +193,25 @@ const AccountSettings: React.FC = () => {
                         type="email"
                       />
                     </FormControl>
+                    <FormControl>
+                      <FormLabel>OpenAI API Key</FormLabel>
+                      <InputGroup>
+                        <Input
+                          type={showApiKey ? 'text' : 'password'}
+                          value={openAiKey}
+                          onChange={(e) => setOpenAiKey(e.target.value)}
+                          placeholder="Enter your OpenAI API key"
+                        />
+                        <InputRightElement>
+                          <IconButton
+                            aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                            icon={showApiKey ? <ViewOffIcon /> : <ViewIcon />}
+                            onClick={() => setShowApiKey(!showApiKey)}
+                            variant="ghost"
+                          />
+                        </InputRightElement>
+                      </InputGroup>
+                    </FormControl>
                   </>
                 ) : (
                   <>
@@ -194,6 +219,9 @@ const AccountSettings: React.FC = () => {
                       {user?.name || 'No name set'}
                     </Text>
                     <Text color="gray.500">{user?.email}</Text>
+                    <Text color="gray.500">
+                      {user?.openAiKey ? '••••••••••••••••' : 'No API key set'}
+                    </Text>
                   </>
                 )}
               </VStack>

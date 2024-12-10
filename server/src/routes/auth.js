@@ -2,9 +2,35 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const passport = require('passport');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
+
+// Google OAuth Routes
+router.get('/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+router.get('/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    async (req, res) => {
+        try {
+            // Create JWT token
+            const token = jwt.sign(
+                { id: req.user.id },
+                process.env.JWT_SECRET,
+                { expiresIn: '30d' }
+            );
+
+            // Redirect to frontend with token
+            res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+        } catch (error) {
+            console.error('Error in Google callback:', error);
+            res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+        }
+    }
+);
 
 // @route   POST /api/auth/signup
 // @desc    Register a new user
@@ -81,7 +107,7 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select('+password +openAiKey');
         if (!user) {
             return res.status(400).json({
                 message: 'Invalid credentials'
@@ -110,6 +136,7 @@ router.post('/login', [
                 email: user.email,
                 name: user.name,
                 picture: user.picture,
+                openAiKey: user.openAiKey,
                 createdAt: user.createdAt
             }
         });
@@ -126,7 +153,7 @@ router.post('/login', [
 // @access  Private
 router.get('/user', protect, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await User.findById(req.user.id).select('-password +openAiKey');
         res.json(user);
     } catch (error) {
         console.error(error);
@@ -142,6 +169,7 @@ router.get('/user', protect, async (req, res) => {
 router.put('/profile', protect, [
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty if provided'),
     body('email').optional().isEmail().withMessage('Please provide a valid email'),
+    body('openAiKey').optional().trim().notEmpty().withMessage('API key cannot be empty if provided')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -149,10 +177,11 @@ router.put('/profile', protect, [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email } = req.body;
+        const { name, email, openAiKey } = req.body;
         const updateFields = {};
 
         if (name) updateFields.name = name;
+        if (openAiKey !== undefined) updateFields.openAiKey = openAiKey;
         if (email) {
             // Check if email is already taken by another user
             const existingUser = await User.findOne({ email });
@@ -168,7 +197,7 @@ router.put('/profile', protect, [
             req.user.id,
             { $set: updateFields },
             { new: true }
-        ).select('-password');
+        ).select('-password +openAiKey');
 
         if (!user) {
             return res.status(404).json({
@@ -203,7 +232,7 @@ router.put('/password', protect, [
         const { currentPassword, newPassword } = req.body;
 
         // Get user with password
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('+password');
         if (!user) {
             return res.status(404).json({
                 message: 'User not found'

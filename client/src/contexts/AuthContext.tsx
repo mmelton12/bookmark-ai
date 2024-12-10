@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import { User, AuthResponse } from '../types';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api, { authAPI } from '../services/api';
+import { User, AuthResponse, UserUpdateInput } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
+  updateProfile: (data: UserUpdateInput) => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
@@ -21,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Check for saved token and user data
@@ -32,7 +33,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(JSON.parse(savedUser));
       setIsAuthenticated(true);
     }
-  }, []);
+
+    // Handle OAuth callback
+    if (location.pathname === '/auth/callback') {
+      const params = new URLSearchParams(location.search);
+      const callbackToken = params.get('token');
+      
+      if (callbackToken) {
+        // Set the token
+        setToken(callbackToken);
+        localStorage.setItem('token', callbackToken);
+        
+        // Fetch user data
+        const fetchUser = async () => {
+          try {
+            const response = await authAPI.getUser();
+            setUser(response);
+            setIsAuthenticated(true);
+            localStorage.setItem('user', JSON.stringify(response));
+            navigate('/');
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+            navigate('/login');
+          }
+        };
+        
+        fetchUser();
+      } else {
+        // Handle error case
+        const error = params.get('error');
+        if (error) {
+          console.error('OAuth error:', error);
+          navigate('/login');
+        }
+      }
+    }
+  }, [location, navigate]);
 
   const handleAuthResponse = (response: AuthResponse) => {
     setToken(response.token);
@@ -44,11 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', {
-        email,
-        password,
-      });
-      handleAuthResponse(response.data);
+      const response = await authAPI.login(email, password);
+      handleAuthResponse(response);
     } catch (error) {
       throw error;
     }
@@ -56,11 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string) => {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/signup', {
-        email,
-        password,
-      });
-      handleAuthResponse(response.data);
+      const response = await authAPI.signup(email, password);
+      handleAuthResponse(response);
     } catch (error) {
       throw error;
     }
@@ -75,11 +105,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login');
   };
 
-  const updateProfile = async (data: { name?: string; email?: string }) => {
+  const updateProfile = async (data: UserUpdateInput) => {
     try {
-      const response = await api.put<User>('/api/auth/profile', data);
-      setUser(response.data);
-      localStorage.setItem('user', JSON.stringify(response.data));
+      const updatedUser = await authAPI.updateProfile(data);
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (error) {
       throw error;
     }
@@ -87,10 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updatePassword = async (currentPassword: string, newPassword: string) => {
     try {
-      await api.put('/api/auth/password', {
-        currentPassword,
-        newPassword,
-      });
+      await authAPI.updatePassword(currentPassword, newPassword);
     } catch (error) {
       throw error;
     }
