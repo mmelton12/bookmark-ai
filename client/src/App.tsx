@@ -8,6 +8,8 @@ import SignupForm from './components/auth/SignupForm';
 import BookmarkList from './components/bookmarks/BookmarkList';
 import AccountSettings from './components/account/AccountSettings';
 import SearchPage from './components/search/SearchPage';
+import ChatPage from './components/chat/ChatPage';
+import FloatingChatBot from './components/chat/FloatingChatBot';
 import Header from './components/layout/Header';
 import theme from './theme';
 
@@ -91,58 +93,71 @@ const OAuthCallback: React.FC = () => {
 };
 
 const AppRoutes: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <AuthLayout>
-            <LoginForm />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          <AuthLayout>
-            <SignupForm />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/auth/callback"
-        element={<OAuthCallback />}
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRouteWrapper>
-            <Box p={8}>
-              <BookmarkList />
-            </Box>
-          </ProtectedRouteWrapper>
-        }
-      />
-      <Route
-        path="/search"
-        element={
-          <ProtectedRouteWrapper>
-            <SearchPage />
-          </ProtectedRouteWrapper>
-        }
-      />
-      <Route
-        path="/account"
-        element={
-          <ProtectedRouteWrapper>
-            <Box p={8}>
-              <AccountSettings />
-            </Box>
-          </ProtectedRouteWrapper>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <AuthLayout>
+              <LoginForm />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthLayout>
+              <SignupForm />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={<OAuthCallback />}
+        />
+        <Route
+          path="/"
+          element={
+            <ProtectedRouteWrapper>
+              <Box p={8}>
+                <BookmarkList />
+              </Box>
+            </ProtectedRouteWrapper>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRouteWrapper>
+              <SearchPage />
+            </ProtectedRouteWrapper>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRouteWrapper>
+              <ChatPage />
+            </ProtectedRouteWrapper>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRouteWrapper>
+              <Box p={8}>
+                <AccountSettings />
+              </Box>
+            </ProtectedRouteWrapper>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+      {isAuthenticated && <FloatingChatBot />}
+    </>
   );
 };
 

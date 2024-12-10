@@ -1,81 +1,98 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api, { authAPI } from '../services/api';
+import { authAPI } from '../services/api';
 import { User, AuthResponse, UserUpdateInput } from '../types';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (data: UserUpdateInput) => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Check for saved token and user data
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
     }
 
-    // Handle OAuth callback
+    // Handle social auth callback
     if (location.pathname === '/auth/callback') {
       const params = new URLSearchParams(location.search);
-      const callbackToken = params.get('token');
-      
-      if (callbackToken) {
-        // Set the token
-        setToken(callbackToken);
-        localStorage.setItem('token', callbackToken);
-        
-        // Fetch user data
+      const token = params.get('token');
+      if (token) {
+        authAPI.handleCallback(token)
+          .then((user) => {
+            setUser(user);
+            setIsAuthenticated(true);
+            navigate('/');
+          })
+          .catch((error) => {
+            console.error('Auth callback error:', error);
+            navigate('/login');
+          });
+      }
+    }
+
+    const checkAuthStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          handleLogout();
+          return;
+        }
+
         const fetchUser = async () => {
           try {
             const response = await authAPI.getUser();
             setUser(response);
             setIsAuthenticated(true);
             localStorage.setItem('user', JSON.stringify(response));
-            navigate('/');
           } catch (error) {
-            console.error('Error fetching user data:', error);
-            navigate('/login');
+            console.error('Error fetching user:', error);
+            handleLogout();
           }
         };
-        
-        fetchUser();
-      } else {
-        // Handle error case
-        const error = params.get('error');
-        if (error) {
-          console.error('OAuth error:', error);
-          navigate('/login');
-        }
+
+        await fetchUser();
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        handleLogout();
       }
+    };
+
+    if (!location.pathname.startsWith('/auth/callback')) {
+      checkAuthStatus();
     }
-  }, [location, navigate]);
+  }, [navigate, location]);
 
   const handleAuthResponse = (response: AuthResponse) => {
-    setToken(response.token);
-    setUser(response.user);
+    const { token, user } = response;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
     setIsAuthenticated(true);
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
+    navigate('/');
   };
 
   const login = async (email: string, password: string) => {
@@ -96,13 +113,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    setIsAuthenticated(false);
+  const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
     navigate('/login');
+  };
+
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } finally {
+      handleLogout();
+    }
   };
 
   const updateProfile = async (data: UserUpdateInput) => {
@@ -123,24 +147,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = {
-    user,
-    token,
-    isAuthenticated,
-    login,
-    signup,
-    logout,
-    updateProfile,
-    updatePassword,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        login,
+        signup,
+        logout,
+        updateProfile,
+        updatePassword,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

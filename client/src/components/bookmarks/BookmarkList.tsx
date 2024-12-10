@@ -18,6 +18,9 @@ import {
   Box,
   Spinner,
   Center,
+  Tag,
+  HStack,
+  CloseButton,
 } from '@chakra-ui/react';
 import { Bookmark } from '../../types';
 import { bookmarkAPI } from '../../services/api';
@@ -32,14 +35,14 @@ const BookmarkList: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
-  const { searchQuery, selectedTags } = useSearch();
+  const { searchQuery, selectedTags, setSelectedTags } = useSearch();
 
   const fetchBookmarks = useCallback(async (pageNum: number = 1) => {
     try {
       setIsLoading(true);
       const response = await bookmarkAPI.search({
         query: searchQuery,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        tags: selectedTags,
         page: pageNum,
       });
       
@@ -126,6 +129,18 @@ const BookmarkList: React.FC = () => {
     }
   };
 
+  const handleTagClick = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags([tag]); // Only show the clicked tag
+      setPage(1); // Reset to first page when changing tags
+    }
+  };
+
+  const handleTagRemove = (tagToRemove: string) => {
+    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
+    setPage(1); // Reset to first page when removing tag filter
+  };
+
   const loadMore = () => {
     if (!isLoading && hasMore) {
       fetchBookmarks(page + 1);
@@ -134,6 +149,7 @@ const BookmarkList: React.FC = () => {
 
   // Fetch bookmarks when search query or selected tags change
   useEffect(() => {
+    setPage(1); // Reset page when filters change
     fetchBookmarks(1);
   }, [fetchBookmarks, searchQuery, selectedTags]);
 
@@ -143,6 +159,23 @@ const BookmarkList: React.FC = () => {
       <Button colorScheme="blue" onClick={onOpen} isDisabled={isLoading}>
         Add New Bookmark
       </Button>
+
+      {selectedTags.length > 0 && (
+        <HStack spacing={2} flexWrap="wrap">
+          {selectedTags.map((tag) => (
+            <Tag
+              key={tag}
+              size="md"
+              borderRadius="full"
+              variant="solid"
+              colorScheme="blue"
+            >
+              <Box as="span" mr={2}>{tag}</Box>
+              <CloseButton size="sm" onClick={() => handleTagRemove(tag)} />
+            </Tag>
+          ))}
+        </HStack>
+      )}
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
@@ -185,6 +218,7 @@ const BookmarkList: React.FC = () => {
               key={bookmark._id}
               bookmark={bookmark}
               onDelete={handleDeleteBookmark}
+              onTagClick={handleTagClick}
             />
           ))}
           {hasMore && (

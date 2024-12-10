@@ -19,9 +19,10 @@ import { Bookmark } from '../../types';
 interface BookmarkCardProps {
   bookmark: Bookmark;
   onDelete: (id: string) => Promise<void>;
+  onTagClick: (tag: string) => void;
 }
 
-const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
+const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagClick }) => {
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -126,6 +127,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
                   variant="subtle"
                   cursor="pointer"
                   _hover={{ bg: tagHoverBg }}
+                  onClick={() => onTagClick(tag)}
                 >
                   {tag}
                 </Tag>
