@@ -24,6 +24,9 @@ export const useAuth = () => {
   return context;
 };
 
+// Protected routes that require authentication
+const PROTECTED_ROUTES = ['/dashboard', '/search', '/chat', '/account'];
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/login');
+    navigate('/');
   }, [navigate]);
 
   // Handle initial auth state and social auth callback
@@ -82,7 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          handleLogout();
+          // Only redirect to login if trying to access a protected route
+          if (PROTECTED_ROUTES.some(route => location.pathname.startsWith(route))) {
+            navigate('/login', { state: { from: location } });
+          }
+          setUser(null);
+          setIsAuthenticated(false);
           return;
         }
 
@@ -92,7 +100,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(response));
       } catch (error) {
         console.error('Auth check failed:', error);
-        handleLogout();
+        if (PROTECTED_ROUTES.some(route => location.pathname.startsWith(route))) {
+          navigate('/login', { state: { from: location } });
+        }
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
@@ -101,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!location.pathname.startsWith('/auth/callback')) {
       checkAuthStatus();
     }
-  }, [location.pathname, handleLogout]);
+  }, [location.pathname, location, navigate]);
 
   const handleAuthResponse = useCallback((response: AuthResponse) => {
     const { token, user } = response;

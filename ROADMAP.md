@@ -1,12 +1,12 @@
 # BookmarkAI Feature Roadmap
 
 ## 1. Organization & Management
-- [ ] Folders/Collections for organizing bookmarks
-- [ ] Bulk operations (delete, move, tag)
+- [x] Folders/Collections for organizing bookmarks
+- [x] Bulk operations (delete, move, tag)
 - [ ] Drag-and-drop organization
-- [ ] Custom tag creation and management
+- [x] Custom tag creation and management
 - [ ] Bookmark categories (e.g., Articles, Videos, Research)
-- [ ] Favorite/Pin important bookmarks
+- [x] Favorite/Pin important bookmarks
 
 ## 2. Enhanced AI Features
 - [ ] Content recommendations based on bookmark history

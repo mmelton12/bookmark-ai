@@ -12,6 +12,7 @@ import SearchPage from './components/search/SearchPage';
 import ChatPage from './components/chat/ChatPage';
 import FloatingChatBot from './components/chat/FloatingChatBot';
 import Header from './components/layout/Header';
+import LandingPage from './components/layout/LandingPage';
 import theme from './theme';
 
 // Protected route wrapper component
@@ -20,8 +21,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Redirect to login while preserving the intended destination
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return (
@@ -39,9 +39,9 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // If user is authenticated, redirect to home or the page they came from
+  // If user is authenticated, redirect to dashboard
   if (isAuthenticated) {
-    const from = (location.state as any)?.from?.pathname || '/';
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
     return <Navigate to={from} replace />;
   }
 
@@ -68,18 +68,8 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// Wrapper for protected routes that need access to auth context
-const ProtectedRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <ProtectedRoute>
-      {children}
-    </ProtectedRoute>
-  );
-};
-
 // OAuth callback handler
 const OAuthCallback: React.FC = () => {
-  // The actual handling is done in AuthContext useEffect
   return (
     <Box
       minH="100vh"
@@ -101,6 +91,11 @@ const AppRoutes: React.FC = () => {
   return (
     <>
       <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />}
+        />
         <Route
           path="/login"
           element={
@@ -121,42 +116,46 @@ const AppRoutes: React.FC = () => {
           path="/auth/callback"
           element={<OAuthCallback />}
         />
+
+        {/* Protected Routes */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
-            <ProtectedRouteWrapper>
+            <ProtectedRoute>
               <Box p={4} height="calc(100vh - 64px)">
                 <BookmarkManager />
               </Box>
-            </ProtectedRouteWrapper>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/search"
           element={
-            <ProtectedRouteWrapper>
+            <ProtectedRoute>
               <SearchPage />
-            </ProtectedRouteWrapper>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/chat"
           element={
-            <ProtectedRouteWrapper>
+            <ProtectedRoute>
               <ChatPage />
-            </ProtectedRouteWrapper>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/account"
           element={
-            <ProtectedRouteWrapper>
+            <ProtectedRoute>
               <Box p={8}>
                 <AccountSettings />
               </Box>
-            </ProtectedRouteWrapper>
+            </ProtectedRoute>
           }
         />
+        
+        {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {isAuthenticated && <FloatingChatBot />}
