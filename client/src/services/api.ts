@@ -36,6 +36,11 @@ interface TagCount {
     count: number;
 }
 
+interface BookmarkStats {
+    totalBookmarks: number;
+    tagsCount: number;
+}
+
 // Auth API
 export const authAPI = {
     login: (email: string, password: string): Promise<AuthResponse> => 
@@ -94,12 +99,46 @@ export const bookmarkAPI = {
         axios.put<Bookmark>(`${API_URL}/bookmarks/${id}`, updates),
 
     getTags: (): Promise<TagCount[]> =>
-        axios.get(`${API_URL}/bookmarks/tags`).then(res => res.data)
+        axios.get(`${API_URL}/bookmarks/tags`).then(res => res.data),
+        
+    getStats: (): Promise<BookmarkStats> =>
+        axios.get(`${API_URL}/bookmarks/stats`).then(res => res.data)
 };
 
 // Chat API
 export const chatAPI = {
-    sendMessage: (message: string, apiKey?: string) => 
-        axios.post<{ reply: string }>(`${API_URL}/chat/chat`, { message, apiKey })
-            .then(response => response.data)
+    sendMessage: async (message: string, apiKey?: string) => {
+        if (!message?.trim()) {
+            throw new Error('Message is required');
+        }
+        if (!apiKey?.trim()) {
+            throw new Error('OpenAI API key is required');
+        }
+
+        try {
+            console.log('Sending chat request with API key length:', apiKey.length); // Debug log
+            const response = await axios.post<{ reply: string }>(
+                `${API_URL}/chat/chat`,
+                {
+                    message: message.trim(),
+                    apiKey: apiKey.trim()
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // Ensure Authorization header is included from interceptor
+                    }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Chat API error:', error); // Debug log
+            if (axios.isAxiosError(error)) {
+                // Extract error message from response if available
+                const errorMessage = error.response?.data?.error || error.message;
+                throw new Error(errorMessage);
+            }
+            throw error;
+        }
+    }
 };

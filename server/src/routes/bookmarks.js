@@ -109,6 +109,35 @@ router.post('/', [
     }
 });
 
+// @route   GET /api/bookmarks/stats
+// @desc    Get user's bookmark statistics
+// @access  Private
+router.get('/stats', protect, async (req, res) => {
+    try {
+        const totalBookmarks = await Bookmark.countDocuments({ user: req.user.id });
+        
+        // Get unique tags count
+        const uniqueTags = await Bookmark.aggregate([
+            { $match: { user: req.user._id } },
+            { $unwind: '$tags' },
+            { $group: { _id: '$tags' } },
+            { $group: { _id: null, count: { $sum: 1 } } }
+        ]);
+        
+        const tagsCount = uniqueTags.length > 0 ? uniqueTags[0].count : 0;
+
+        res.json({
+            totalBookmarks,
+            tagsCount
+        });
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        res.status(500).json({
+            message: 'Failed to fetch statistics'
+        });
+    }
+});
+
 // @route   GET /api/bookmarks/tags
 // @desc    Get all tags with their counts
 // @access  Private

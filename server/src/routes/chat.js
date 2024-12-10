@@ -1,31 +1,57 @@
 const express = require('express');
 const router = express.Router();
 const { Configuration, OpenAIApi } = require('openai');
+const { protect } = require('../middleware/auth');
 
 const createOpenAIClient = (apiKey) => {
     if (!apiKey) {
         throw new Error('OpenAI API key is required');
     }
     const configuration = new Configuration({
-        apiKey: apiKey
+        apiKey: apiKey.trim()
     });
     return new OpenAIApi(configuration);
 };
 
-router.post('/chat', async (req, res) => {
+// Add auth protection to chat route
+router.post('/chat', protect, async (req, res) => {
     try {
+        // Log full request details
+        console.log('Chat request received:', { 
+            userId: req.user?.id,
+            body: {
+                hasMessage: !!req.body.message,
+                hasApiKey: !!req.body.apiKey,
+                messageLength: req.body.message?.length,
+                apiKeyLength: req.body.apiKey?.length
+            },
+            headers: {
+                authorization: req.headers.authorization ? 'Bearer token present' : 'No bearer token',
+                'content-type': req.headers['content-type']
+            }
+        });
+        
         const { message, apiKey } = req.body;
         
-        if (!message) {
-            return res.status(400).json({ error: 'Message is required' });
+        if (!message?.trim()) {
+            console.log('Chat error: Message is required');
+            return res.status(400).json({ 
+                error: 'Message is required',
+                details: 'Message is empty or missing'
+            });
         }
         
-        if (!apiKey) {
-            return res.status(400).json({ error: 'OpenAI API key is required' });
+        if (!apiKey?.trim()) {
+            console.log('Chat error: OpenAI API key is required');
+            return res.status(400).json({ 
+                error: 'OpenAI API key is required',
+                details: 'API key is empty or missing'
+            });
         }
 
         const openai = createOpenAIClient(apiKey);
 
+        console.log('Sending request to OpenAI...');
         const response = await openai.createChatCompletion({
             model: "gpt-4",
             messages: [
@@ -35,7 +61,7 @@ router.post('/chat', async (req, res) => {
                 },
                 {
                     role: "user",
-                    content: message
+                    content: message.trim()
                 }
             ],
             temperature: 0.7,
@@ -43,22 +69,41 @@ router.post('/chat', async (req, res) => {
         });
 
         if (!response.data.choices || response.data.choices.length === 0) {
+            console.log('Chat error: No response from OpenAI');
             throw new Error('No response from OpenAI');
         }
 
+        console.log('Successfully received response from OpenAI');
         res.json({ 
             reply: response.data.choices[0].message.content 
         });
     } catch (error) {
-        console.error('Chat error:', error);
+        console.error('Chat error:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            stack: error.stack,
+            requestBody: {
+                hasMessage: !!req.body.message,
+                hasApiKey: !!req.body.apiKey,
+                messageLength: req.body.message?.length,
+                apiKeyLength: req.body.apiKey?.length
+            }
+        });
         
         // Handle specific error types
         if (error.response?.status === 401) {
-            return res.status(401).json({ error: 'Invalid OpenAI API key' });
+            return res.status(401).json({ 
+                error: 'Invalid OpenAI API key',
+                details: error.response?.data
+            });
         }
         
         if (error.message === 'OpenAI API key is required') {
-            return res.status(400).json({ error: error.message });
+            return res.status(400).json({ 
+                error: error.message,
+                details: 'API key validation failed'
+            });
         }
 
         res.status(500).json({ 

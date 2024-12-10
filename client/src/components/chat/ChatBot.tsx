@@ -40,6 +40,17 @@ const ChatBot: React.FC<ChatBotProps> = ({ apiKey }) => {
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    if (!apiKey) {
+      toast({
+        title: 'Error',
+        description: 'OpenAI API key is required. Please add it in your account settings.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
     const userMessage: Message = {
       content: input.trim(),
       isUser: true,
@@ -51,6 +62,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ apiKey }) => {
     setIsLoading(true);
 
     try {
+      console.log('Sending message with API key:', apiKey ? 'Present' : 'Missing'); // Debug log
       const response = await chatAPI.sendMessage(userMessage.content, apiKey);
       const botMessage: Message = {
         content: response.reply,
@@ -59,6 +71,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ apiKey }) => {
       };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
+      console.error('Chat error:', error); // Debug log
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to get response',

@@ -14,20 +14,39 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import ChatBot from './ChatBot';
 import { useAuth } from '../../contexts/AuthContext';
+import { authAPI } from '../../services/api';
 
 const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const toast = useToast();
 
   useEffect(() => {
-    // Short timeout to ensure auth context is properly initialized
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    const fetchLatestUser = async () => {
+      try {
+        // Get latest user data
+        const latestUser = await authAPI.getUser();
+        
+        // If we have an API key, ensure it's synced with the context
+        if (latestUser.openAiKey) {
+          await updateProfile({ openAiKey: latestUser.openAiKey });
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load user data',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, []);
+    fetchLatestUser();
+  }, [updateProfile, toast]);
 
   if (isLoading) {
     return (

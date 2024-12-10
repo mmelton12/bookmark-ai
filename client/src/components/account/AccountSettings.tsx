@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -28,9 +28,11 @@ import {
   InputGroup,
   InputRightElement,
   IconButton,
+  Spinner,
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
+import { bookmarkAPI } from '../../services/api';
 
 const ChangePasswordModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -129,9 +131,33 @@ const AccountSettings: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [stats, setStats] = useState({ totalBookmarks: 0, tagsCount: 0 });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const statsData = await bookmarkAPI.getStats();
+        setStats(statsData);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load account statistics',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [toast]);
 
   const handleUpdateProfile = async () => {
     setIsLoading(true);
@@ -254,24 +280,30 @@ const AccountSettings: React.FC = () => {
         <CardBody>
           <VStack spacing={6} align="start">
             <Heading size="md">Account Statistics</Heading>
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} w="full">
-              <Stat>
-                <StatLabel>Total Bookmarks</StatLabel>
-                <StatNumber>0</StatNumber>
-              </Stat>
-              <Stat>
-                <StatLabel>Tags Used</StatLabel>
-                <StatNumber>0</StatNumber>
-              </Stat>
-              <Stat>
-                <StatLabel>Member Since</StatLabel>
-                <StatNumber>
-                  {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString()
-                    : 'N/A'}
-                </StatNumber>
-              </Stat>
-            </SimpleGrid>
+            {isLoadingStats ? (
+              <Box w="full" display="flex" justifyContent="center">
+                <Spinner />
+              </Box>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} w="full">
+                <Stat>
+                  <StatLabel>Total Bookmarks</StatLabel>
+                  <StatNumber>{stats.totalBookmarks}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Tags Used</StatLabel>
+                  <StatNumber>{stats.tagsCount}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Member Since</StatLabel>
+                  <StatNumber>
+                    {user?.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString()
+                      : 'N/A'}
+                  </StatNumber>
+                </Stat>
+              </SimpleGrid>
+            )}
           </VStack>
         </CardBody>
       </Card>

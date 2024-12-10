@@ -16,9 +16,12 @@ router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
     async (req, res) => {
         try {
+            // Get full user data including openAiKey
+            const user = await User.findById(req.user.id).select('+openAiKey');
+            
             // Create JWT token
             const token = jwt.sign(
-                { id: req.user.id },
+                { id: user.id },
                 process.env.JWT_SECRET,
                 { expiresIn: '30d' }
             );
@@ -66,6 +69,9 @@ router.post('/signup', [
         // Save user
         await user.save();
 
+        // Get full user data including openAiKey
+        user = await User.findById(user.id).select('+openAiKey');
+
         // Create token
         const token = jwt.sign(
             { id: user.id },
@@ -80,6 +86,7 @@ router.post('/signup', [
                 email: user.email,
                 name: user.name,
                 picture: user.picture,
+                openAiKey: user.openAiKey,
                 createdAt: user.createdAt
             }
         });
@@ -165,6 +172,7 @@ router.post('/logout', (req, res) => {
 // @access  Private
 router.get('/user', protect, async (req, res) => {
     try {
+        // Explicitly select openAiKey field
         const user = await User.findById(req.user.id).select('-password +openAiKey');
         res.json(user);
     } catch (error) {
