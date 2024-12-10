@@ -109,6 +109,45 @@ router.post('/', [
     }
 });
 
+// @route   GET /api/bookmarks/tags
+// @desc    Get all tags with their counts
+// @access  Private
+router.get('/tags', protect, async (req, res) => {
+    try {
+        // Aggregate to get tags and their counts
+        const tagCounts = await Bookmark.aggregate([
+            // Match documents for the current user
+            { $match: { user: req.user._id } },
+            // Unwind the tags array to create a document for each tag
+            { $unwind: '$tags' },
+            // Group by tag and count occurrences
+            { 
+                $group: {
+                    _id: '$tags',
+                    count: { $sum: 1 }
+                }
+            },
+            // Format the output
+            {
+                $project: {
+                    _id: 0,
+                    name: '$_id',
+                    count: 1
+                }
+            },
+            // Sort by count in descending order
+            { $sort: { count: -1 } }
+        ]);
+
+        res.json(tagCounts);
+    } catch (error) {
+        console.error('Error fetching tags:', error);
+        res.status(500).json({
+            message: 'Failed to fetch tags'
+        });
+    }
+});
+
 // @route   GET /api/bookmarks
 // @desc    Get all bookmarks for a user
 // @access  Private

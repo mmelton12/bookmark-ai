@@ -18,11 +18,6 @@ import {
   Box,
   Spinner,
   Center,
-  Tag,
-  TagLabel,
-  TagCloseButton,
-  Wrap,
-  WrapItem,
 } from '@chakra-ui/react';
 import { Bookmark } from '../../types';
 import { bookmarkAPI } from '../../services/api';
@@ -35,19 +30,9 @@ const BookmarkList: React.FC = () => {
   const [newBookmarkUrl, setNewBookmarkUrl] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
-  const { searchQuery, selectedTags, setSelectedTags } = useSearch();
-
-  // Extract unique tags from bookmarks
-  useEffect(() => {
-    const tags = new Set<string>();
-    bookmarks.forEach(bookmark => {
-      bookmark.tags.forEach(tag => tags.add(tag));
-    });
-    setAvailableTags(Array.from(tags));
-  }, [bookmarks]);
+  const { searchQuery, selectedTags } = useSearch();
 
   const fetchBookmarks = useCallback(async (pageNum: number = 1) => {
     try {
@@ -80,20 +65,6 @@ const BookmarkList: React.FC = () => {
       setIsLoading(false);
     }
   }, [searchQuery, selectedTags, toast]);
-
-  // Handle tag selection
-  const handleTagSelect = (tag: string) => {
-    if (!selectedTags.includes(tag)) {
-      const newTags = [...selectedTags, tag];
-      setSelectedTags(newTags);
-    }
-  };
-
-  // Handle tag removal
-  const handleTagRemove = (tagToRemove: string) => {
-    const newTags = selectedTags.filter(tag => tag !== tagToRemove);
-    setSelectedTags(newTags);
-  };
 
   const handleAddBookmark = async () => {
     if (!newBookmarkUrl.trim()) {
@@ -172,48 +143,6 @@ const BookmarkList: React.FC = () => {
       <Button colorScheme="blue" onClick={onOpen} isDisabled={isLoading}>
         Add New Bookmark
       </Button>
-
-      {/* Tag Filters */}
-      <Box bg="white" p={4} borderRadius="md" shadow="sm">
-        <VStack spacing={4}>
-          {/* Selected Tags */}
-          <Wrap spacing={2}>
-            {selectedTags.map(tag => (
-              <WrapItem key={tag}>
-                <Tag size="md" colorScheme="blue" borderRadius="full">
-                  <TagLabel>{tag}</TagLabel>
-                  <TagCloseButton onClick={() => handleTagRemove(tag)} />
-                </Tag>
-              </WrapItem>
-            ))}
-          </Wrap>
-
-          {/* Available Tags */}
-          <Box w="full">
-            <Text fontSize="sm" color="gray.600" mb={2}>
-              Filter by tags:
-            </Text>
-            <Wrap spacing={2}>
-              {availableTags
-                .filter(tag => !selectedTags.includes(tag))
-                .map(tag => (
-                  <WrapItem key={tag}>
-                    <Tag
-                      size="md"
-                      variant="outline"
-                      colorScheme="gray"
-                      borderRadius="full"
-                      cursor="pointer"
-                      onClick={() => handleTagSelect(tag)}
-                    >
-                      <TagLabel>{tag}</TagLabel>
-                    </Tag>
-                  </WrapItem>
-                ))}
-            </Wrap>
-          </Box>
-        </VStack>
-      </Box>
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />

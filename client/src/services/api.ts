@@ -44,6 +44,11 @@ interface GetAllBookmarksParams {
     tags?: string[];
 }
 
+interface TagCount {
+    name: string;
+    count: number;
+}
+
 const handleApiError = (error: any) => {
     if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -122,8 +127,14 @@ export const bookmarkAPI = {
     },
     search: async (filters: SearchFilters): Promise<PaginatedResponse<Bookmark>> => {
         try {
+            // Convert tags array to comma-separated string for the API
+            const params = {
+                ...filters,
+                tags: filters.tags?.length ? filters.tags.join(',') : undefined
+            };
+            
             const response = await api.get<PaginatedResponse<Bookmark>>('/bookmarks/search', {
-                params: filters,
+                params,
             });
             return response.data;
         } catch (error) {
@@ -142,6 +153,15 @@ export const bookmarkAPI = {
     update: async (id: string, data: Partial<Bookmark>): Promise<Bookmark> => {
         try {
             const response = await api.put<Bookmark>(`/bookmarks/${id}`, data);
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+            throw error;
+        }
+    },
+    getTags: async (): Promise<TagCount[]> => {
+        try {
+            const response = await api.get<TagCount[]>('/bookmarks/tags');
             return response.data;
         } catch (error) {
             handleApiError(error);

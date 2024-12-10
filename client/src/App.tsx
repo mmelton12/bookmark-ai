@@ -7,6 +7,7 @@ import LoginForm from './components/auth/LoginForm';
 import SignupForm from './components/auth/SignupForm';
 import BookmarkList from './components/bookmarks/BookmarkList';
 import AccountSettings from './components/account/AccountSettings';
+import SearchPage from './components/search/SearchPage';
 import Header from './components/layout/Header';
 import theme from './theme';
 
@@ -119,6 +120,14 @@ const AppRoutes: React.FC = () => {
             <Box p={8}>
               <BookmarkList />
             </Box>
+          </ProtectedRouteWrapper>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRouteWrapper>
+            <SearchPage />
           </ProtectedRouteWrapper>
         }
       />
