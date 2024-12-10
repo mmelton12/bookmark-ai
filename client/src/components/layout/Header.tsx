@@ -4,23 +4,25 @@ import {
   Flex,
   Button,
   Heading,
-  useColorModeValue,
   Container,
   IconButton,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
+  useColorMode,
+  useColorModeValue,
+  Tooltip,
 } from '@chakra-ui/react';
-import { HamburgerIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, SunIcon, MoonIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { colorMode, toggleColorMode } = useColorMode();
   const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   const handleLogout = () => {
     logout();
@@ -32,7 +34,7 @@ const Header: React.FC = () => {
       as="header"
       bg={bgColor}
       borderBottom="1px"
-      borderColor={borderColor}
+      borderColor="chakra-border-color"
       position="sticky"
       top={0}
       zIndex={10}
@@ -49,10 +51,19 @@ const Header: React.FC = () => {
             BookmarkAI
           </Heading>
 
-          <Box display={{ base: 'none', md: 'block' }}>
+          <Flex alignItems="center" display={{ base: 'none', md: 'flex' }}>
             <Button variant="ghost" mr={2} onClick={() => navigate('/')}>
               Dashboard
             </Button>
+            <Tooltip label={colorMode === 'light' ? 'Dark mode' : 'Light mode'}>
+              <IconButton
+                aria-label="Toggle color mode"
+                icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                onClick={toggleColorMode}
+                variant="ghost"
+                mr={2}
+              />
+            </Tooltip>
             <Button
               onClick={handleLogout}
               colorScheme="brand"
@@ -60,7 +71,7 @@ const Header: React.FC = () => {
             >
               Logout
             </Button>
-          </Box>
+          </Flex>
 
           <Box display={{ base: 'block', md: 'none' }}>
             <Menu>
@@ -72,6 +83,9 @@ const Header: React.FC = () => {
               />
               <MenuList>
                 <MenuItem onClick={() => navigate('/')}>Dashboard</MenuItem>
+                <MenuItem onClick={toggleColorMode}>
+                  {colorMode === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </MenuItem>
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </MenuList>
             </Menu>

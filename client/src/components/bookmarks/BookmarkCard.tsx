@@ -11,6 +11,7 @@ import {
   Link,
   Alert,
   AlertIcon,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { DeleteIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 import { Bookmark } from '../../types';
@@ -22,6 +23,13 @@ interface BookmarkCardProps {
 
 const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
   const toast = useToast();
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+  const summaryColor = useColorModeValue('gray.700', 'gray.200');
+  const linkColor = useColorModeValue('blue.600', 'blue.300');
+  const dateColor = useColorModeValue('gray.500', 'gray.400');
+  const tagHoverBg = useColorModeValue('blue.100', 'blue.700');
 
   const handleDelete = async () => {
     try {
@@ -45,8 +53,9 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
       p={5}
       shadow="md"
       borderWidth="1px"
+      borderColor={borderColor}
       borderRadius="lg"
-      bg="white"
+      bg={bgColor}
       position="relative"
       _hover={{ shadow: 'lg' }}
       transition="all 0.2s"
@@ -69,7 +78,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
         <Link
           href={bookmark.url}
           isExternal
-          color="blue.600"
+          color={linkColor}
           fontSize="sm"
           noOfLines={1}
           display="flex"
@@ -80,26 +89,26 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
         </Link>
 
         {bookmark.description && (
-          <Text color="gray.600" fontSize="sm" noOfLines={2}>
+          <Text color={textColor} fontSize="sm" noOfLines={2}>
             {bookmark.description}
           </Text>
         )}
 
         {bookmark.warning && (
-          <Alert status="warning" size="sm">
+          <Alert status="warning" size="sm" variant="left-accent">
             <AlertIcon />
             {bookmark.warning}
           </Alert>
         )}
 
         {isError ? (
-          <Alert status="error" size="sm">
+          <Alert status="error" size="sm" variant="left-accent">
             <AlertIcon />
             {bookmark.aiSummary}
           </Alert>
         ) : (
           bookmark.aiSummary && (
-            <Text color="gray.700" fontSize="sm" noOfLines={3}>
+            <Text color={summaryColor} fontSize="sm" noOfLines={3}>
               <Text as="span" fontWeight="semibold">AI Summary: </Text>
               {bookmark.aiSummary}
             </Text>
@@ -116,7 +125,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
                   colorScheme="blue"
                   variant="subtle"
                   cursor="pointer"
-                  _hover={{ bg: 'blue.100' }}
+                  _hover={{ bg: tagHoverBg }}
                 >
                   {tag}
                 </Tag>
@@ -125,7 +134,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete }) => {
           </Box>
         )}
 
-        <Text color="gray.500" fontSize="xs">
+        <Text color={dateColor} fontSize="xs">
           Added {new Date(bookmark.createdAt).toLocaleDateString()}
         </Text>
       </VStack>
