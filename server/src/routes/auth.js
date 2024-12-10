@@ -1,7 +1,46 @@
 const express = require('express');
+const passport = require('passport');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const router = express.Router();
+
+// @route   GET /api/auth/google
+// @desc    Google OAuth login
+// @access  Public
+router.get('/google',
+    passport.authenticate('google', { 
+        scope: ['profile', 'email'],
+        session: false 
+    })
+);
+
+// @route   GET /api/auth/google/callback
+// @desc    Google OAuth callback
+// @access  Public
+router.get('/google/callback',
+    passport.authenticate('google', { 
+        session: false,
+        failureRedirect: '/login'
+    }),
+    (req, res) => {
+        try {
+            const token = req.user.getSignedJwtToken();
+            const userData = {
+                id: req.user._id,
+                email: req.user.email,
+                name: req.user.name,
+                picture: req.user.picture,
+                createdAt: req.user.createdAt
+            };
+
+            // Redirect to frontend with token and user data
+            res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`);
+        } catch (error) {
+            console.error('OAuth callback error:', error);
+            res.redirect(`${process.env.CLIENT_URL}/login?error=Authentication failed`);
+        }
+    }
+);
 
 // @route   POST /api/auth/signup
 // @desc    Register a user
@@ -96,6 +135,8 @@ router.post('/login', [
         const userData = {
             id: user._id,
             email: user.email,
+            name: user.name,
+            picture: user.picture,
             createdAt: user.createdAt
         };
 

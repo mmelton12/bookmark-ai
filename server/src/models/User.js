@@ -14,9 +14,22 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Please provide a password'],
+        required: function() {
+            return !this.googleId; // Password is required only if not using Google auth
+        },
         minlength: 6,
         select: false
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    name: {
+        type: String
+    },
+    picture: {
+        type: String
     },
     createdAt: {
         type: Date,
@@ -26,7 +39,7 @@ const userSchema = new mongoose.Schema({
 
 // Encrypt password before saving
 userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) {
+    if (!this.isModified('password') || !this.password) {
         next();
     }
     const salt = await bcrypt.genSalt(10);
@@ -42,6 +55,7 @@ userSchema.methods.getSignedJwtToken = function() {
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function(enteredPassword) {
+    if (!this.password) return false;
     return await bcrypt.compare(enteredPassword, this.password);
 };
 

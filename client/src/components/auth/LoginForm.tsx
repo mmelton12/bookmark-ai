@@ -9,8 +9,12 @@ import {
   Text,
   Link,
   useToast,
-  FormErrorMessage
+  FormErrorMessage,
+  Divider,
+  Box,
+  Center
 } from '@chakra-ui/react';
+import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm: React.FC = () => {
@@ -78,9 +82,29 @@ const LoginForm: React.FC = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:5001/api/auth/google';
+  };
+
   return (
     <VStack spacing={4} as="form" onSubmit={handleSubmit}>
       <Text fontSize="2xl" fontWeight="bold">Login to BookmarkAI</Text>
+      
+      <Button
+        width="full"
+        variant="outline"
+        leftIcon={<Box as={FcGoogle} />}
+        onClick={handleGoogleLogin}
+        isLoading={isLoading}
+      >
+        Continue with Google
+      </Button>
+
+      <Center w="full" py={4}>
+        <Divider />
+        <Text px={4} color="gray.500">or</Text>
+        <Divider />
+      </Center>
       
       <FormControl isInvalid={!!emailError} isRequired>
         <FormLabel>Email</FormLabel>

@@ -69,6 +69,24 @@ const ProtectedRouteWrapper: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 };
 
+// OAuth callback handler
+const OAuthCallback: React.FC = () => {
+  // The actual handling is done in AuthContext useEffect
+  return (
+    <Box
+      minH="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bg="gray.50"
+    >
+      <Box textAlign="center">
+        Processing login...
+      </Box>
+    </Box>
+  );
+};
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -87,6 +105,10 @@ const AppRoutes: React.FC = () => {
             <SignupForm />
           </AuthLayout>
         }
+      />
+      <Route
+        path="/auth/callback"
+        element={<OAuthCallback />}
       />
       <Route
         path="/"

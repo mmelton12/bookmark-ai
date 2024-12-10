@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { authAPI } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  handleOAuthCallback: (token: string, userData: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +34,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleOAuthCallback = useCallback((token: string, userData: string) => {
+    try {
+      const parsedUser = JSON.parse(userData);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(parsedUser));
+      setUser(parsedUser);
+      navigate('/');
+    } catch (error) {
+      console.error('Error handling OAuth callback:', error);
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    // Handle OAuth callback
+    if (location.pathname === '/auth/callback') {
+      const params = new URLSearchParams(location.search);
+      const token = params.get('token');
+      const userData = params.get('user');
+      
+      if (token && userData) {
+        handleOAuthCallback(token, userData);
+      }
+    }
+  }, [location, handleOAuthCallback]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -73,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
+    handleOAuthCallback,
   };
 
   return (
