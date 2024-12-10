@@ -1,8 +1,11 @@
 const { Configuration, OpenAIApi } = require('openai');
 
 const createOpenAIClient = (apiKey) => {
+    if (!apiKey) {
+        throw new Error('OpenAI API key is required. Please add it in your account settings.');
+    }
     const configuration = new Configuration({
-        apiKey: apiKey || process.env.OPENAI_API_KEY
+        apiKey: apiKey
     });
     return new OpenAIApi(configuration);
 };
@@ -15,7 +18,11 @@ exports.analyzeContent = async (url, content, userApiKey) => {
         return { summary, tags };
     } catch (error) {
         console.error('Error analyzing content:', error);
-        throw error;
+        // Return default values instead of throwing
+        return {
+            summary: 'Summary generation failed. Please try again later.',
+            tags: []
+        };
     }
 };
 
@@ -26,7 +33,7 @@ exports.generateTags = async (content, openaiClient) => {
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful assistant that generates relevant tags for web content. Generate 3-5 relevant tags that best describe the content. Return only the tags as a JSON array of strings."
+                    content: "You are a helpful assistant that generates relevant tags for web content. Generate 3-5 specific, descriptive tags that best categorize the content. Never use generic tags like 'other', 'miscellaneous', or 'general'. Return only the tags as a JSON array of strings, all in lowercase. Example: ['technology', 'artificial-intelligence', 'machine-learning']"
                 },
                 {
                     role: "user",
@@ -37,11 +44,29 @@ exports.generateTags = async (content, openaiClient) => {
             max_tokens: 100
         });
 
-        const tags = JSON.parse(response.data.choices[0].message.content);
+        let tags = [];
+        try {
+            tags = JSON.parse(response.data.choices[0].message.content);
+            // Filter and clean tags
+            tags = tags
+                .map(tag => tag.toLowerCase().trim())
+                .filter(tag => {
+                    // Remove empty tags, 'other', and generic terms
+                    const genericTerms = ['other', 'miscellaneous', 'general', 'misc', 'various'];
+                    return tag && 
+                           tag.length > 0 && 
+                           !genericTerms.includes(tag.toLowerCase()) &&
+                           tag.length <= 50; // Reasonable length limit
+                });
+        } catch (parseError) {
+            console.error('Error parsing tags:', parseError);
+            return [];
+        }
+
         return tags;
     } catch (error) {
         console.error('Error generating tags:', error);
-        return ['error', 'failed-to-generate-tags'];
+        return []; // Return empty array instead of throwing
     }
 };
 
@@ -63,9 +88,10 @@ exports.generateSummary = async (content, openaiClient) => {
             max_tokens: 150
         });
 
-        return response.data.choices[0].message.content.trim();
+        const summary = response.data.choices[0].message.content.trim();
+        return summary || 'No summary available.';
     } catch (error) {
         console.error('Error generating summary:', error);
-        return 'Failed to generate summary';
+        return 'Summary generation failed. Please try again later.';
     }
 };

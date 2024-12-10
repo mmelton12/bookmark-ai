@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -30,9 +30,18 @@ import { Bookmark } from '../../types';
 interface BookmarkListProps {
   onMove: (bookmarkIds: string[]) => void;
   onTag: (bookmarkIds: string[]) => void;
+  searchQuery?: string;
+  selectedTag?: string | null;
+  onTagClick?: (tag: string) => void;
 }
 
-const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
+const BookmarkList: React.FC<BookmarkListProps> = ({ 
+  onMove, 
+  onTag, 
+  searchQuery = '', 
+  selectedTag = null,
+  onTagClick
+}) => {
   const { selectedFolder } = useFolder();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +51,23 @@ const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  useEffect(() => {
-    fetchBookmarks();
-  }, [selectedFolder]);
-
-  const fetchBookmarks = async () => {
+  const fetchBookmarks = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await bookmarkAPI.getBookmarks(selectedFolder);
+      let response;
+      
+      if (searchQuery || selectedTag) {
+        // Use search endpoint when there's a search query or selected tag
+        response = await bookmarkAPI.search({
+          query: searchQuery,
+          tags: selectedTag ? [selectedTag] : [],
+          folderId: selectedFolder
+        });
+      } else {
+        // Use regular getBookmarks endpoint when no search/filter is active
+        response = await bookmarkAPI.getBookmarks(selectedFolder);
+      }
+      
       setBookmarks(response.data);
       setError(null);
     } catch (err) {
@@ -58,7 +76,11 @@ const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedFolder, searchQuery, selectedTag]);
+
+  useEffect(() => {
+    fetchBookmarks();
+  }, [fetchBookmarks]);
 
   const handleCheckboxChange = (bookmarkId: string) => {
     setSelectedBookmarks(prev => {
@@ -115,7 +137,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
   if (!bookmarks.length) {
     return (
       <Box p={4}>
-        <Text color="gray.500">No bookmarks in this folder</Text>
+        <Text color="gray.500">No bookmarks found</Text>
       </Box>
     );
   }
@@ -173,7 +195,9 @@ const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
               <Box flex={1}>
                 <HStack justify="space-between" mb={2}>
                   <Text fontWeight="bold" fontSize="lg">
-                    {bookmark.title}
+                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
+                      {bookmark.title}
+                    </a>
                   </Text>
                   <HStack>
                     <IconButton
@@ -225,12 +249,20 @@ const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
                   </HStack>
                 </HStack>
                 <Text color="blue.500" mb={2}>
-                  {bookmark.url}
+                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
+                    {bookmark.url}
+                  </a>
                 </Text>
-                <Text mb={3}>{bookmark.description}</Text>
+                <Text mb={3}>{bookmark.aiSummary || bookmark.description}</Text>
                 <HStack spacing={2} wrap="wrap">
                   {bookmark.tags.map((tag) => (
-                    <Tag key={tag} size="sm">
+                    <Tag 
+                      key={tag} 
+                      size="sm" 
+                      cursor="pointer"
+                      colorScheme="blue"
+                      onClick={() => onTagClick?.(tag)}
+                    >
                       {tag}
                     </Tag>
                   ))}

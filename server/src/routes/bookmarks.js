@@ -7,24 +7,60 @@ const { analyzeContent } = require('../services/openai');
 const { fetchContent } = require('../utils/contentFetcher');
 const router = express.Router();
 
-// Original bookmark creation route remains unchanged
+// @route   POST /api/bookmarks
+// @desc    Create a new bookmark
+// @access  Private
 router.post('/', [
     protect,
     body('url').isURL().withMessage('Please provide a valid URL')
 ], async (req, res) => {
-    // ... (keep existing implementation)
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        // Get user with OpenAI key
+        const user = await User.findById(req.user.id).select('+openAiKey');
+        if (!user.openAiKey) {
+            return res.status(400).json({
+                message: 'OpenAI API key is required. Please add it in your account settings.'
+            });
+        }
+
+        // Fetch content from URL
+        const { url } = req.body;
+        const { title, content, description } = await fetchContent(url);
+
+        // Generate AI summary and tags
+        const { summary, tags } = await analyzeContent(url, content, user.openAiKey);
+
+        // Create bookmark
+        const bookmark = await Bookmark.create({
+            url,
+            title,
+            description,
+            aiSummary: summary,
+            tags,
+            user: req.user.id
+        });
+
+        res.status(201).json(bookmark);
+    } catch (error) {
+        console.error('Error creating bookmark:', error);
+        res.status(500).json({
+            message: error.message || 'Failed to create bookmark'
+        });
+    }
 });
 
-// @route   POST /api/bookmarks/bulk
-// @desc    Bulk create/update/delete bookmarks
-// @access  Private
+// Bulk operations route
 router.post('/bulk', protect, async (req, res) => {
     try {
         const { action, bookmarkIds, data } = req.body;
 
         switch (action) {
             case 'move':
-                // Move bookmarks to a folder
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { folder: data.folderId || null } }
@@ -32,7 +68,6 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'tag':
-                // Add tags to bookmarks
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $addToSet: { tags: { $each: data.tags } } }
@@ -40,7 +75,6 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'untag':
-                // Remove tags from bookmarks
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $pullAll: { tags: data.tags } }
@@ -48,7 +82,6 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'delete':
-                // Delete multiple bookmarks
                 await Bookmark.deleteMany({
                     _id: { $in: bookmarkIds },
                     user: req.user.id
@@ -56,7 +89,6 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'favorite':
-                // Toggle favorite status
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { isFavorite: data.isFavorite } }
@@ -64,7 +96,6 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'category':
-                // Update category
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { category: data.category } }
@@ -82,15 +113,10 @@ router.post('/bulk', protect, async (req, res) => {
     }
 });
 
-// @route   GET /api/bookmarks/stats
-// @desc    Get user's bookmark statistics
-// @access  Private
+// Stats route
 router.get('/stats', protect, async (req, res) => {
     try {
-        // Get total bookmarks count
         const totalBookmarks = await Bookmark.countDocuments({ user: req.user.id });
-
-        // Get unique tags count
         const bookmarks = await Bookmark.find({ user: req.user.id });
         const uniqueTags = new Set();
         bookmarks.forEach(bookmark => {
@@ -110,32 +136,49 @@ router.get('/stats', protect, async (req, res) => {
     }
 });
 
-// Keep existing tags route
+// Tags route
 router.get('/tags', protect, async (req, res) => {
-    // ... (keep existing implementation)
+    try {
+        const bookmarks = await Bookmark.find({ user: req.user.id });
+        const tagCounts = {};
+        
+        bookmarks.forEach(bookmark => {
+            if (bookmark.tags) {
+                bookmark.tags.forEach(tag => {
+                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                });
+            }
+        });
+
+        const tags = Object.entries(tagCounts).map(([name, count]) => ({
+            name,
+            count
+        })).sort((a, b) => b.count - a.count);
+
+        res.json(tags);
+    } catch (error) {
+        console.error('Failed to fetch tags:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
-// Update the GET bookmarks route to support filtering by folder and favorites
+// Get bookmarks route
 router.get('/', protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        // Build query based on filters
         const query = { user: req.user.id };
 
-        // Filter by folder
         if ('folderId' in req.query) {
-            query.folder = req.query.folderId || null; // null for root folder
+            query.folder = req.query.folderId || null;
         }
 
-        // Filter by favorite
         if (req.query.favorite === 'true') {
             query.isFavorite = true;
         }
 
-        // Filter by category
         if (req.query.category) {
             query.category = req.query.category;
         }
@@ -159,7 +202,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// Update search route to include folder and favorite filters
+// Search route
 router.get('/search', protect, async (req, res) => {
     try {
         const { tags, query, folderId, favorite, category } = req.query;
@@ -167,25 +210,20 @@ router.get('/search', protect, async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        // Build search query
         const searchQuery = { user: req.user.id };
 
-        // Add folder filter
         if ('folderId' in req.query) {
             searchQuery.folder = folderId || null;
         }
 
-        // Add favorite filter
         if (favorite === 'true') {
             searchQuery.isFavorite = true;
         }
 
-        // Add category filter
         if (category) {
             searchQuery.category = category;
         }
 
-        // Add tag filter
         if (tags && typeof tags === 'string') {
             const searchTags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
             if (searchTags.length > 0) {
@@ -193,7 +231,6 @@ router.get('/search', protect, async (req, res) => {
             }
         }
 
-        // Add text search
         if (query && typeof query === 'string' && query.trim()) {
             searchQuery.$text = { $search: query.trim() };
         }
@@ -201,7 +238,6 @@ router.get('/search', protect, async (req, res) => {
         const total = await Bookmark.countDocuments(searchQuery);
         let bookmarksQuery = Bookmark.find(searchQuery);
 
-        // Add text score sorting if text search is being used
         if (query && typeof query === 'string' && query.trim()) {
             bookmarksQuery = bookmarksQuery
                 .select({ score: { $meta: 'textScore' } })
@@ -255,9 +291,24 @@ router.put('/:id', protect, async (req, res) => {
     }
 });
 
-// Keep existing delete route
+// Delete bookmark route
 router.delete('/:id', protect, async (req, res) => {
-    // ... (keep existing implementation)
+    try {
+        const bookmark = await Bookmark.findOne({
+            _id: req.params.id,
+            user: req.user.id
+        });
+
+        if (!bookmark) {
+            return res.status(404).json({ message: 'Bookmark not found' });
+        }
+
+        await bookmark.remove();
+        res.json({ message: 'Bookmark removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
 module.exports = router;

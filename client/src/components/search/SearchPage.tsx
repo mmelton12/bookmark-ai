@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   VStack,
@@ -42,30 +42,68 @@ const SearchPage: React.FC = () => {
     }
   };
 
-  const handleTagClick = (tagName: string) => {
-    if (!selectedTags.includes(tagName)) {
-      setSelectedTags([...selectedTags, tagName]);
-    }
-  };
+  const handleTagClick = useCallback((tagName: string) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tagName)) {
+        return prev.filter(tag => tag !== tagName);
+      }
+      return [...prev, tagName];
+    });
+  }, []);
 
-  const handleTagRemove = (tagName: string) => {
-    setSelectedTags(selectedTags.filter(tag => tag !== tagName));
-  };
+  const handleTagRemove = useCallback((tagName: string) => {
+    setSelectedTags(prev => prev.filter(tag => tag !== tagName));
+  }, []);
 
   const handleSearch = () => {
     setIsLoading(true);
-    // Search functionality is handled by the SearchContext
-    setIsLoading(false);
+    try {
+      // The actual search is handled by BookmarkList component
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleMoveBookmarks = async (bookmarkIds: string[]) => {
-    // Implement move functionality
-    console.log('Moving bookmarks:', bookmarkIds);
+    try {
+      await bookmarkAPI.bulkUpdate(bookmarkIds, { action: 'move' });
+      toast({
+        title: 'Bookmarks moved successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error moving bookmarks:', error);
+      toast({
+        title: 'Error moving bookmarks',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleTagBookmarks = async (bookmarkIds: string[]) => {
-    // Implement tag functionality
-    console.log('Tagging bookmarks:', bookmarkIds);
+    try {
+      await bookmarkAPI.bulkUpdate(bookmarkIds, { action: 'tag' });
+      toast({
+        title: 'Bookmarks tagged successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      // Refresh available tags after tagging
+      await fetchTags();
+    } catch (error) {
+      console.error('Error tagging bookmarks:', error);
+      toast({
+        title: 'Error tagging bookmarks',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
@@ -87,7 +125,7 @@ const SearchPage: React.FC = () => {
                   <Tag
                     key={name}
                     size="md"
-                    variant="subtle"
+                    variant={selectedTags.includes(name) ? "solid" : "subtle"}
                     colorScheme="blue"
                     cursor="pointer"
                     onClick={() => handleTagClick(name)}
@@ -129,6 +167,9 @@ const SearchPage: React.FC = () => {
         <BookmarkList
           onMove={handleMoveBookmarks}
           onTag={handleTagBookmarks}
+          searchQuery={searchQuery}
+          selectedTag={selectedTags.length === 1 ? selectedTags[0] : null}
+          onTagClick={handleTagClick}
         />
       </VStack>
     </Container>

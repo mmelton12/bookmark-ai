@@ -82,7 +82,13 @@ export const bookmarkAPI = {
         axios.get(`${API_URL}/bookmarks/tags`).then(res => res.data),
         
     getStats: (): Promise<BookmarkStats> =>
-        axios.get(`${API_URL}/bookmarks/stats`).then(res => res.data)
+        axios.get(`${API_URL}/bookmarks/stats`).then(res => res.data),
+
+    bulkUpdate: (bookmarkIds: string[], data: { action: string, [key: string]: any }): Promise<void> =>
+        axios.post(`${API_URL}/bookmarks/bulk`, {
+            bookmarkIds,
+            ...data
+        }).then(res => res.data)
 };
 
 // Folder API
