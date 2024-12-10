@@ -1,112 +1,119 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User } from '../types';
-import { authAPI } from '../services/api';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { User, AuthResponse } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  handleOAuthCallback: (token: string, userData: string) => void;
+  updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch (error) {
-      console.error('Error parsing stored user:', error);
-      return null;
-    }
-  });
-  
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const handleOAuthCallback = useCallback((token: string, userData: string) => {
-    try {
-      const parsedUser = JSON.parse(userData);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(parsedUser));
-      setUser(parsedUser);
-      navigate('/');
-    } catch (error) {
-      console.error('Error handling OAuth callback:', error);
-      navigate('/login');
-    }
-  }, [navigate]);
 
   useEffect(() => {
-    // Handle OAuth callback
-    if (location.pathname === '/auth/callback') {
-      const params = new URLSearchParams(location.search);
-      const token = params.get('token');
-      const userData = params.get('user');
-      
-      if (token && userData) {
-        handleOAuthCallback(token, userData);
-      }
+    // Check for saved token and user data
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+      setIsAuthenticated(true);
     }
-  }, [location, handleOAuthCallback]);
+  }, []);
+
+  const handleAuthResponse = (response: AuthResponse) => {
+    setToken(response.token);
+    setUser(response.user);
+    setIsAuthenticated(true);
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+  };
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await authAPI.login(email, password);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
-      navigate('/');
+      const response = await api.post<AuthResponse>('/api/auth/login', {
+        email,
+        password,
+      });
+      handleAuthResponse(response.data);
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
   };
 
   const signup = async (email: string, password: string) => {
     try {
-      const response = await authAPI.signup(email, password);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
-      navigate('/');
+      const response = await api.post<AuthResponse>('/api/auth/signup', {
+        email,
+        password,
+      });
+      handleAuthResponse(response.data);
     } catch (error) {
-      console.error('Signup error:', error);
       throw error;
     }
   };
 
   const logout = () => {
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null);
     navigate('/login');
+  };
+
+  const updateProfile = async (data: { name?: string; email?: string }) => {
+    try {
+      const response = await api.put<User>('/api/auth/profile', data);
+      setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      await api.put('/api/auth/password', {
+        currentPassword,
+        newPassword,
+      });
+    } catch (error) {
+      throw error;
+    }
   };
 
   const value = {
     user,
-    isAuthenticated: !!user && !!localStorage.getItem('token'),
+    token,
+    isAuthenticated,
     login,
     signup,
     logout,
-    handleOAuthCallback,
+    updateProfile,
+    updatePassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

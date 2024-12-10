@@ -21,16 +21,13 @@ import {
   Tag,
   TagLabel,
   TagCloseButton,
-  InputGroup,
-  InputLeftElement,
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';
-import { SearchIcon } from '@chakra-ui/icons';
 import { Bookmark } from '../../types';
 import { bookmarkAPI } from '../../services/api';
 import BookmarkCard from './BookmarkCard';
-import { debounce } from 'lodash';
+import { useSearch } from '../../contexts/SearchContext';
 
 const BookmarkList: React.FC = () => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -38,11 +35,10 @@ const BookmarkList: React.FC = () => {
   const [newBookmarkUrl, setNewBookmarkUrl] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
+  const { searchQuery, selectedTags, setSelectedTags } = useSearch();
 
   // Extract unique tags from bookmarks
   useEffect(() => {
@@ -53,12 +49,12 @@ const BookmarkList: React.FC = () => {
     setAvailableTags(Array.from(tags));
   }, [bookmarks]);
 
-  const fetchBookmarks = useCallback(async (pageNum: number = 1, search: string = searchQuery, tags: string[] = selectedTags) => {
+  const fetchBookmarks = useCallback(async (pageNum: number = 1) => {
     try {
       setIsLoading(true);
       const response = await bookmarkAPI.search({
-        query: search,
-        tags: tags.length > 0 ? tags : undefined,
+        query: searchQuery,
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
         page: pageNum,
       });
       
@@ -85,32 +81,11 @@ const BookmarkList: React.FC = () => {
     }
   }, [searchQuery, selectedTags, toast]);
 
-  // Debounced search function
-  const debouncedSearch = useCallback((search: string) => {
-    fetchBookmarks(1, search, selectedTags);
-  }, [fetchBookmarks, selectedTags]);
-
-  // Use useEffect to set up the debounced function
-  useEffect(() => {
-    const debouncedSearchFn = debounce(debouncedSearch, 300);
-    return () => {
-      debouncedSearchFn.cancel();
-    };
-  }, [debouncedSearch]);
-
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    debouncedSearch(value);
-  };
-
   // Handle tag selection
   const handleTagSelect = (tag: string) => {
     if (!selectedTags.includes(tag)) {
       const newTags = [...selectedTags, tag];
       setSelectedTags(newTags);
-      fetchBookmarks(1, searchQuery, newTags);
     }
   };
 
@@ -118,7 +93,6 @@ const BookmarkList: React.FC = () => {
   const handleTagRemove = (tagToRemove: string) => {
     const newTags = selectedTags.filter(tag => tag !== tagToRemove);
     setSelectedTags(newTags);
-    fetchBookmarks(1, searchQuery, newTags);
   };
 
   const handleAddBookmark = async () => {
@@ -187,9 +161,10 @@ const BookmarkList: React.FC = () => {
     }
   };
 
+  // Fetch bookmarks when search query or selected tags change
   useEffect(() => {
-    fetchBookmarks();
-  }, [fetchBookmarks]);
+    fetchBookmarks(1);
+  }, [fetchBookmarks, searchQuery, selectedTags]);
 
   return (
     <VStack spacing={4} align="stretch" w="full" maxW="container.lg" mx="auto" p={4}>
@@ -198,20 +173,9 @@ const BookmarkList: React.FC = () => {
         Add New Bookmark
       </Button>
 
-      {/* Search and Filter Section */}
+      {/* Tag Filters */}
       <Box bg="white" p={4} borderRadius="md" shadow="sm">
         <VStack spacing={4}>
-          <InputGroup>
-            <InputLeftElement pointerEvents="none">
-              <SearchIcon color="gray.300" />
-            </InputLeftElement>
-            <Input
-              placeholder="Search bookmarks..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
-          </InputGroup>
-
           {/* Selected Tags */}
           <Wrap spacing={2}>
             {selectedTags.map(tag => (
@@ -227,7 +191,7 @@ const BookmarkList: React.FC = () => {
           {/* Available Tags */}
           <Box w="full">
             <Text fontSize="sm" color="gray.600" mb={2}>
-              Available Tags:
+              Filter by tags:
             </Text>
             <Wrap spacing={2}>
               {availableTags

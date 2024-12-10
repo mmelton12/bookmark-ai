@@ -1,49 +1,13 @@
 const express = require('express');
-const passport = require('passport');
 const { body, validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const { protect } = require('../middleware/auth');
 const router = express.Router();
 
-// @route   GET /api/auth/google
-// @desc    Google OAuth login
-// @access  Public
-router.get('/google',
-    passport.authenticate('google', { 
-        scope: ['profile', 'email'],
-        session: false 
-    })
-);
-
-// @route   GET /api/auth/google/callback
-// @desc    Google OAuth callback
-// @access  Public
-router.get('/google/callback',
-    passport.authenticate('google', { 
-        session: false,
-        failureRedirect: '/login'
-    }),
-    (req, res) => {
-        try {
-            const token = req.user.getSignedJwtToken();
-            const userData = {
-                id: req.user._id,
-                email: req.user.email,
-                name: req.user.name,
-                picture: req.user.picture,
-                createdAt: req.user.createdAt
-            };
-
-            // Redirect to frontend with token and user data
-            res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`);
-        } catch (error) {
-            console.error('OAuth callback error:', error);
-            res.redirect(`${process.env.CLIENT_URL}/login?error=Authentication failed`);
-        }
-    }
-);
-
 // @route   POST /api/auth/signup
-// @desc    Register a user
+// @desc    Register a new user
 // @access  Public
 router.post('/signup', [
     body('email').isEmail().withMessage('Please provide a valid email'),
@@ -52,7 +16,6 @@ router.post('/signup', [
         .withMessage('Password must be at least 6 characters long')
 ], async (req, res) => {
     try {
-        // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -69,24 +32,30 @@ router.post('/signup', [
         }
 
         // Create user
-        user = await User.create({
+        user = new User({
             email,
             password
         });
 
-        // Create token
-        const token = user.getSignedJwtToken();
+        // Save user
+        await user.save();
 
-        // Return user data without password
-        const userData = {
-            id: user._id,
-            email: user.email,
-            createdAt: user.createdAt
-        };
+        // Create token
+        const token = jwt.sign(
+            { id: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '30d' }
+        );
 
         res.status(201).json({
             token,
-            user: userData
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                picture: user.picture,
+                createdAt: user.createdAt
+            }
         });
     } catch (error) {
         console.error(error);
@@ -97,14 +66,13 @@ router.post('/signup', [
 });
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Authenticate user & get token
 // @access  Public
 router.post('/login', [
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password').exists().withMessage('Password is required')
 ], async (req, res) => {
     try {
-        // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -113,36 +81,149 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ email }).select('+password');
+        const user = await User.findOne({ email });
         if (!user) {
-            return res.status(401).json({
+            return res.status(400).json({
                 message: 'Invalid credentials'
             });
         }
 
-        // Check if password matches
-        const isMatch = await user.matchPassword(password);
+        // Check password
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(401).json({
+            return res.status(400).json({
                 message: 'Invalid credentials'
             });
         }
 
         // Create token
-        const token = user.getSignedJwtToken();
-
-        // Return user data without password
-        const userData = {
-            id: user._id,
-            email: user.email,
-            name: user.name,
-            picture: user.picture,
-            createdAt: user.createdAt
-        };
+        const token = jwt.sign(
+            { id: user.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '30d' }
+        );
 
         res.json({
             token,
-            user: userData
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                picture: user.picture,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+});
+
+// @route   GET /api/auth/user
+// @desc    Get user data
+// @access  Private
+router.get('/user', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+});
+
+// @route   PUT /api/auth/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', protect, [
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty if provided'),
+    body('email').optional().isEmail().withMessage('Please provide a valid email'),
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { name, email } = req.body;
+        const updateFields = {};
+
+        if (name) updateFields.name = name;
+        if (email) {
+            // Check if email is already taken by another user
+            const existingUser = await User.findOne({ email });
+            if (existingUser && existingUser._id.toString() !== req.user.id) {
+                return res.status(400).json({
+                    message: 'Email is already in use'
+                });
+            }
+            updateFields.email = email;
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { $set: updateFields },
+            { new: true }
+        ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
+
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+});
+
+// @route   PUT /api/auth/password
+// @desc    Update user password
+// @access  Private
+router.put('/password', protect, [
+    body('currentPassword').exists().withMessage('Current password is required'),
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('New password must be at least 6 characters long')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        // Get user with password
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
+
+        // Check current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                message: 'Current password is incorrect'
+            });
+        }
+
+        // Update password
+        user.password = newPassword;
+        await user.save();
+
+        res.json({
+            message: 'Password updated successfully'
         });
     } catch (error) {
         console.error(error);

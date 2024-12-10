@@ -2,9 +2,11 @@ import React from 'react';
 import { ChakraProvider, Box } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SearchProvider } from './contexts/SearchContext';
 import LoginForm from './components/auth/LoginForm';
 import SignupForm from './components/auth/SignupForm';
 import BookmarkList from './components/bookmarks/BookmarkList';
+import AccountSettings from './components/account/AccountSettings';
 import Header from './components/layout/Header';
 import theme from './theme';
 
@@ -19,10 +21,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   return (
-    <>
+    <SearchProvider>
       <Header />
       {children}
-    </>
+    </SearchProvider>
   );
 };
 
@@ -116,6 +118,16 @@ const AppRoutes: React.FC = () => {
           <ProtectedRouteWrapper>
             <Box p={8}>
               <BookmarkList />
+            </Box>
+          </ProtectedRouteWrapper>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRouteWrapper>
+            <Box p={8}>
+              <AccountSettings />
             </Box>
           </ProtectedRouteWrapper>
         }

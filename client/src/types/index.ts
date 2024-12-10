@@ -4,7 +4,8 @@ export interface User {
   name?: string;
   picture?: string;
   googleId?: string;
-  createdAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Bookmark {
@@ -67,4 +68,14 @@ export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+}
+
+export interface UserUpdateInput {
+  name?: string;
+  email?: string;
+}
+
+export interface PasswordUpdateInput {
+  currentPassword: string;
+  newPassword: string;
 }
