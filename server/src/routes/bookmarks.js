@@ -130,27 +130,44 @@ router.get('/', protect, async (req, res) => {
 });
 
 // @route   GET /api/bookmarks/search
-// @desc    Search bookmarks by tags
+// @desc    Search bookmarks by tags and text
 // @access  Private
 router.get('/search', protect, async (req, res) => {
     try {
-        const { tags } = req.query;
+        const { tags, query } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const searchTags = tags.split(',').map(tag => tag.trim());
+        // Build search query
+        const searchQuery = { user: req.user.id };
 
-        const total = await Bookmark.countDocuments({
-            user: req.user.id,
-            tags: { $in: searchTags }
-        });
+        // Add tag filter if provided
+        if (tags && typeof tags === 'string') {
+            const searchTags = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+            if (searchTags.length > 0) {
+                searchQuery.tags = { $in: searchTags };
+            }
+        }
 
-        const bookmarks = await Bookmark.find({
-            user: req.user.id,
-            tags: { $in: searchTags }
-        })
-            .sort({ createdAt: -1 })
+        // Add text search if provided
+        if (query && typeof query === 'string' && query.trim()) {
+            searchQuery.$text = { $search: query.trim() };
+        }
+
+        const total = await Bookmark.countDocuments(searchQuery);
+        let bookmarksQuery = Bookmark.find(searchQuery);
+
+        // Add text score sorting if text search is being used
+        if (query && typeof query === 'string' && query.trim()) {
+            bookmarksQuery = bookmarksQuery
+                .select({ score: { $meta: 'textScore' } })
+                .sort({ score: { $meta: 'textScore' } });
+        } else {
+            bookmarksQuery = bookmarksQuery.sort({ createdAt: -1 });
+        }
+
+        const bookmarks = await bookmarksQuery
             .skip(skip)
             .limit(limit);
 

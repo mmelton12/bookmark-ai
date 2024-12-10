@@ -51,6 +51,8 @@ export interface SearchFilters {
   query?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface PaginatedResponse<T> {

@@ -17,11 +17,20 @@ import {
   Text,
   Box,
   Spinner,
-  Center
+  Center,
+  Tag,
+  TagLabel,
+  TagCloseButton,
+  InputGroup,
+  InputLeftElement,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
+import { SearchIcon } from '@chakra-ui/icons';
 import { Bookmark } from '../../types';
 import { bookmarkAPI } from '../../services/api';
 import BookmarkCard from './BookmarkCard';
+import { debounce } from 'lodash';
 
 const BookmarkList: React.FC = () => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -29,13 +38,30 @@ const BookmarkList: React.FC = () => {
   const [newBookmarkUrl, setNewBookmarkUrl] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
-  const fetchBookmarks = useCallback(async (pageNum: number = 1) => {
+  // Extract unique tags from bookmarks
+  useEffect(() => {
+    const tags = new Set<string>();
+    bookmarks.forEach(bookmark => {
+      bookmark.tags.forEach(tag => tags.add(tag));
+    });
+    setAvailableTags(Array.from(tags));
+  }, [bookmarks]);
+
+  const fetchBookmarks = useCallback(async (pageNum: number = 1, search: string = searchQuery, tags: string[] = selectedTags) => {
     try {
       setIsLoading(true);
-      const response = await bookmarkAPI.getAll({ page: pageNum });
+      const response = await bookmarkAPI.search({
+        query: search,
+        tags: tags.length > 0 ? tags : undefined,
+        page: pageNum,
+      });
+      
       if (pageNum === 1) {
         setBookmarks(response.data);
       } else {
@@ -51,14 +77,49 @@ const BookmarkList: React.FC = () => {
         duration: 5000,
         isClosable: true,
       });
-      // Initialize empty array on error
       if (pageNum === 1) {
         setBookmarks([]);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [searchQuery, selectedTags, toast]);
+
+  // Debounced search function
+  const debouncedSearch = useCallback((search: string) => {
+    fetchBookmarks(1, search, selectedTags);
+  }, [fetchBookmarks, selectedTags]);
+
+  // Use useEffect to set up the debounced function
+  useEffect(() => {
+    const debouncedSearchFn = debounce(debouncedSearch, 300);
+    return () => {
+      debouncedSearchFn.cancel();
+    };
+  }, [debouncedSearch]);
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    debouncedSearch(value);
+  };
+
+  // Handle tag selection
+  const handleTagSelect = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      const newTags = [...selectedTags, tag];
+      setSelectedTags(newTags);
+      fetchBookmarks(1, searchQuery, newTags);
+    }
+  };
+
+  // Handle tag removal
+  const handleTagRemove = (tagToRemove: string) => {
+    const newTags = selectedTags.filter(tag => tag !== tagToRemove);
+    setSelectedTags(newTags);
+    fetchBookmarks(1, searchQuery, newTags);
+  };
 
   const handleAddBookmark = async () => {
     if (!newBookmarkUrl.trim()) {
@@ -77,7 +138,6 @@ const BookmarkList: React.FC = () => {
       await bookmarkAPI.create(newBookmarkUrl);
       setNewBookmarkUrl('');
       onClose();
-      // Refresh the first page to show the new bookmark
       await fetchBookmarks(1);
       toast({
         title: 'Success',
@@ -102,7 +162,6 @@ const BookmarkList: React.FC = () => {
   const handleDeleteBookmark = async (id: string) => {
     try {
       await bookmarkAPI.delete(id);
-      // Refresh the first page after deletion
       await fetchBookmarks(1);
       toast({
         title: 'Success',
@@ -139,6 +198,59 @@ const BookmarkList: React.FC = () => {
         Add New Bookmark
       </Button>
 
+      {/* Search and Filter Section */}
+      <Box bg="white" p={4} borderRadius="md" shadow="sm">
+        <VStack spacing={4}>
+          <InputGroup>
+            <InputLeftElement pointerEvents="none">
+              <SearchIcon color="gray.300" />
+            </InputLeftElement>
+            <Input
+              placeholder="Search bookmarks..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </InputGroup>
+
+          {/* Selected Tags */}
+          <Wrap spacing={2}>
+            {selectedTags.map(tag => (
+              <WrapItem key={tag}>
+                <Tag size="md" colorScheme="blue" borderRadius="full">
+                  <TagLabel>{tag}</TagLabel>
+                  <TagCloseButton onClick={() => handleTagRemove(tag)} />
+                </Tag>
+              </WrapItem>
+            ))}
+          </Wrap>
+
+          {/* Available Tags */}
+          <Box w="full">
+            <Text fontSize="sm" color="gray.600" mb={2}>
+              Available Tags:
+            </Text>
+            <Wrap spacing={2}>
+              {availableTags
+                .filter(tag => !selectedTags.includes(tag))
+                .map(tag => (
+                  <WrapItem key={tag}>
+                    <Tag
+                      size="md"
+                      variant="outline"
+                      colorScheme="gray"
+                      borderRadius="full"
+                      cursor="pointer"
+                      onClick={() => handleTagSelect(tag)}
+                    >
+                      <TagLabel>{tag}</TagLabel>
+                    </Tag>
+                  </WrapItem>
+                ))}
+            </Wrap>
+          </Box>
+        </VStack>
+      </Box>
+
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
@@ -171,7 +283,7 @@ const BookmarkList: React.FC = () => {
         </Center>
       ) : bookmarks.length === 0 ? (
         <Text textAlign="center" color="gray.500">
-          No bookmarks yet. Add your first bookmark!
+          No bookmarks found. Try adjusting your search or filters.
         </Text>
       ) : (
         <>
