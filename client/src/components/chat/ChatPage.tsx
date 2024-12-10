@@ -92,7 +92,7 @@ const ChatPage: React.FC = () => {
         <Text color="gray.600">
           Chat with our AI assistant to help you manage and understand your bookmarks better.
         </Text>
-        <ChatBot apiKey={user.openAiKey} />
+        <ChatBot />
       </VStack>
     </Container>
   );

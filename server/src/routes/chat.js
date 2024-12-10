@@ -21,9 +21,7 @@ router.post('/chat', protect, async (req, res) => {
             userId: req.user?.id,
             body: {
                 hasMessage: !!req.body.message,
-                hasApiKey: !!req.body.apiKey,
-                messageLength: req.body.message?.length,
-                apiKeyLength: req.body.apiKey?.length
+                messageLength: req.body.message?.length
             },
             headers: {
                 authorization: req.headers.authorization ? 'Bearer token present' : 'No bearer token',
@@ -31,7 +29,8 @@ router.post('/chat', protect, async (req, res) => {
             }
         });
         
-        const { message, apiKey } = req.body;
+        const { message } = req.body;
+        const apiKey = req.user.openAiKey;
         
         if (!message?.trim()) {
             console.log('Chat error: Message is required');
@@ -45,7 +44,7 @@ router.post('/chat', protect, async (req, res) => {
             console.log('Chat error: OpenAI API key is required');
             return res.status(400).json({ 
                 error: 'OpenAI API key is required',
-                details: 'API key is empty or missing'
+                details: 'Please add your OpenAI API key in account settings'
             });
         }
 
@@ -85,9 +84,7 @@ router.post('/chat', protect, async (req, res) => {
             stack: error.stack,
             requestBody: {
                 hasMessage: !!req.body.message,
-                hasApiKey: !!req.body.apiKey,
-                messageLength: req.body.message?.length,
-                apiKeyLength: req.body.apiKey?.length
+                messageLength: req.body.message?.length
             }
         });
         
@@ -102,7 +99,7 @@ router.post('/chat', protect, async (req, res) => {
         if (error.message === 'OpenAI API key is required') {
             return res.status(400).json({ 
                 error: error.message,
-                details: 'API key validation failed'
+                details: 'Please add your OpenAI API key in account settings'
             });
         }
 

@@ -21,7 +21,8 @@ exports.protect = async (req, res, next) => {
         try {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await User.findById(decoded.id);
+            // Explicitly select the openAiKey field
+            req.user = await User.findById(decoded.id).select('+openAiKey');
             next();
         } catch (err) {
             return res.status(401).json({

@@ -108,21 +108,16 @@ export const folderAPI = {
 
 // Chat API
 export const chatAPI = {
-    sendMessage: async (message: string, apiKey?: string) => {
+    sendMessage: async (message: string) => {
         if (!message?.trim()) {
             throw new Error('Message is required');
         }
-        if (!apiKey?.trim()) {
-            throw new Error('OpenAI API key is required');
-        }
 
         try {
-            console.log('Sending chat request with API key length:', apiKey.length);
             const response = await axios.post<{ reply: string }>(
                 `${API_URL}/chat/chat`,
                 {
-                    message: message.trim(),
-                    apiKey: apiKey.trim()
+                    message: message.trim()
                 },
                 {
                     headers: {
