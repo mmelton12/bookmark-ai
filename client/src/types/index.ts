@@ -9,6 +9,17 @@ export interface User {
   updatedAt: string;
 }
 
+export interface Folder {
+  _id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  parent: string | null;
+  subfolders: Folder[];
+  bookmarkCount: number;
+}
+
 export interface Bookmark {
   _id: string;
   url: string;

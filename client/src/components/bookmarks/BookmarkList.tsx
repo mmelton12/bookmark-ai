@@ -42,7 +42,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   selectedTag = null,
   onTagClick
 }) => {
-  const { selectedFolder } = useFolder();
+  const { selectedFolder, refreshFolders } = useFolder();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +97,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       try {
         await Promise.all(selectedBookmarks.map(id => bookmarkAPI.delete(id)));
         await fetchBookmarks();
+        await refreshFolders(); // Refresh folder counts after deletion
         setSelectedBookmarks([]);
       } catch (error) {
         console.error('Failed to delete bookmarks:', error);
@@ -236,6 +237,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                               try {
                                 await bookmarkAPI.delete(bookmark._id);
                                 await fetchBookmarks();
+                                await refreshFolders(); // Refresh folder counts after deletion
                               } catch (error) {
                                 console.error('Failed to delete bookmark:', error);
                               }

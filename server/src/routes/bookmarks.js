@@ -20,6 +20,20 @@ router.post('/', [
             return res.status(400).json({ errors: errors.array() });
         }
 
+        const { url } = req.body;
+
+        // Check for existing bookmark with same URL for this user
+        const existingBookmark = await Bookmark.findOne({ 
+            url: url,
+            user: req.user.id 
+        });
+
+        if (existingBookmark) {
+            return res.status(400).json({
+                message: 'This URL has already been bookmarked'
+            });
+        }
+
         // Get user with OpenAI key
         const user = await User.findById(req.user.id).select('+openAiKey');
         if (!user.openAiKey) {
@@ -29,7 +43,6 @@ router.post('/', [
         }
 
         // Fetch content from URL
-        const { url } = req.body;
         const { title, content, description } = await fetchContent(url);
 
         // Generate AI summary and tags

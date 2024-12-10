@@ -23,12 +23,35 @@ import {
   TagCloseButton,
   useToast,
   Text,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { useFolder } from '../../contexts/FolderContext';
 import FolderManager from '../folders/FolderManager';
 import BookmarkList from './BookmarkList';
 import { bookmarkAPI } from '../../services/api';
 import { useSearch } from '../../contexts/SearchContext';
+
+// Add FolderDrawer component
+const FolderDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  return (
+    <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="full">
+      <DrawerOverlay />
+      <DrawerContent>
+        <DrawerCloseButton />
+        <DrawerHeader>Folders</DrawerHeader>
+        <DrawerBody>
+          <FolderManager />
+        </DrawerBody>
+      </DrawerContent>
+    </Drawer>
+  );
+};
 
 interface TagOperationDialogProps {
   isOpen: boolean;
@@ -209,7 +232,7 @@ const MoveOperationDialog: React.FC<MoveOperationDialogProps> = ({
   bookmarkIds,
   onComplete,
 }) => {
-  const { folders } = useFolder();
+  const { folders, refreshFolders } = useFolder();
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const toast = useToast();
 
@@ -220,6 +243,7 @@ const MoveOperationDialog: React.FC<MoveOperationDialogProps> = ({
           bookmarkAPI.updateBookmark(id, { folder: selectedFolder })
         )
       );
+      await refreshFolders(); // Refresh folders to update counts
       toast({
         title: 'Bookmarks moved successfully',
         status: 'success',
@@ -281,6 +305,7 @@ const BookmarkManager: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const { searchQuery } = useSearch();
   const toast = useToast();
+  const { isOpen: isFolderDrawerOpen, onOpen: onFolderDrawerOpen, onClose: onFolderDrawerClose } = useDisclosure();
 
   const handleTagOperation = useCallback((bookmarkIds: string[]) => {
     setSelectedBookmarkIds(bookmarkIds);
@@ -300,13 +325,18 @@ const BookmarkManager: React.FC = () => {
     setSelectedTag(prevTag => prevTag === tag ? null : tag);
   }, []);
 
+  // Export the folder drawer open function to make it accessible from the header
+  React.useEffect(() => {
+    (window as any).openFolderDrawer = onFolderDrawerOpen;
+  }, [onFolderDrawerOpen]);
+
   return (
     <Grid
-      templateColumns="300px 1fr"
+      templateColumns={{ base: "1fr", md: "300px 1fr" }}
       gap={4}
       height="100%"
     >
-      <GridItem>
+      <GridItem display={{ base: 'none', md: 'block' }}>
         <FolderManager />
       </GridItem>
       <GridItem>
@@ -346,6 +376,11 @@ const BookmarkManager: React.FC = () => {
         onClose={() => setIsMoveDialogOpen(false)}
         bookmarkIds={selectedBookmarkIds}
         onComplete={handleOperationComplete}
+      />
+
+      <FolderDrawer 
+        isOpen={isFolderDrawerOpen} 
+        onClose={onFolderDrawerClose}
       />
     </Grid>
   );

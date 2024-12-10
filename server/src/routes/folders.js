@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
 const Folder = require('../models/Folder');
 const Bookmark = require('../models/Bookmark');
+const mongoose = require('mongoose');
 const router = express.Router();
 
 // @route   POST /api/folders
@@ -42,22 +43,56 @@ router.post('/', [
 router.get('/', protect, async (req, res) => {
     try {
         const folders = await Folder.find({ user: req.user.id })
-            .populate('subfolders')
-            .populate('bookmarks');
+            .populate('subfolders');
+
+        console.log('User ID:', req.user.id);
+
+        // Get bookmark counts for all folders
+        const bookmarkCounts = await Bookmark.aggregate([
+            { 
+                $match: { 
+                    user: new mongoose.Types.ObjectId(req.user.id) 
+                } 
+            },
+            { 
+                $group: { 
+                    _id: '$folder', 
+                    count: { $sum: 1 } 
+                } 
+            }
+        ]);
+
+        console.log('Bookmark counts:', JSON.stringify(bookmarkCounts, null, 2));
+
+        // Create a map of folder IDs to bookmark counts
+        const countMap = new Map(
+            bookmarkCounts.map(item => [
+                item._id ? item._id.toString() : 'null',
+                item.count
+            ])
+        );
+
+        console.log('Count map:', Object.fromEntries(countMap));
 
         // Organize folders into a tree structure
         const rootFolders = folders.filter(folder => !folder.parent);
-        const folderMap = new Map(folders.map(folder => [folder._id.toString(), folder]));
-
+        
         const buildTree = (folder) => {
             const folderObj = folder.toObject();
+            const folderId = folder._id.toString();
+            folderObj.bookmarkCount = countMap.get(folderId) || 0;
+            
+            console.log(`Folder "${folder.name}" (${folderId}) count:`, folderObj.bookmarkCount);
+            
             folderObj.subfolders = folders
-                .filter(f => f.parent?.toString() === folder._id.toString())
+                .filter(f => f.parent?.toString() === folderId)
                 .map(buildTree);
             return folderObj;
         };
 
         const folderTree = rootFolders.map(buildTree);
+
+        console.log('Final folder tree:', JSON.stringify(folderTree, null, 2));
 
         res.json(folderTree);
     } catch (error) {

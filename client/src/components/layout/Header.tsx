@@ -27,20 +27,26 @@ import {
   Input,
   useDisclosure,
   useToast,
+  Alert,
+  AlertIcon,
 } from '@chakra-ui/react';
 import { HamburgerIcon, SunIcon, MoonIcon, SearchIcon, SettingsIcon, AddIcon } from '@chakra-ui/icons';
+import { FaFolder } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { setSelectedFolder } = useFolder();
   const { colorMode, toggleColorMode } = useColorMode();
   const bgColor = useColorModeValue('white', 'gray.800');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [newBookmarkUrl, setNewBookmarkUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
   const handleLogout = () => {
@@ -48,20 +54,20 @@ const Header: React.FC = () => {
     navigate('/login');
   };
 
+  const handleDashboardClick = () => {
+    setSelectedFolder(null);
+    navigate('/');
+  };
+
   const handleAddBookmark = async () => {
     if (!newBookmarkUrl.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a URL',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      setError('Please enter a URL');
       return;
     }
 
     try {
       setIsLoading(true);
+      setError(null);
       await bookmarkAPI.create(newBookmarkUrl);
       setNewBookmarkUrl('');
       onClose();
@@ -74,17 +80,29 @@ const Header: React.FC = () => {
       });
       // Refresh the current page to show the new bookmark
       window.location.reload();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add bookmark',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    } catch (error: any) {
+      // Check for duplicate bookmark error
+      if (error.response?.data?.message === 'This URL has already been bookmarked') {
+        setError('This URL has already been bookmarked');
+      } else {
+        setError(error.response?.data?.message || 'Failed to add bookmark');
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenFolders = () => {
+    // Call the globally exposed folder drawer open function
+    if ((window as any).openFolderDrawer) {
+      (window as any).openFolderDrawer();
+    }
+  };
+
+  const handleModalClose = () => {
+    setError(null);
+    setNewBookmarkUrl('');
+    onClose();
   };
 
   return (
@@ -103,14 +121,14 @@ const Header: React.FC = () => {
           <Heading
             size="md"
             cursor="pointer"
-            onClick={() => navigate('/')}
+            onClick={handleDashboardClick}
             color="brand.500"
           >
             BookmarkAI
           </Heading>
 
           <Flex alignItems="center" display={{ base: 'none', md: 'flex' }}>
-            <Button variant="ghost" mr={2} onClick={() => navigate('/')}>
+            <Button variant="ghost" mr={2} onClick={handleDashboardClick}>
               Dashboard
             </Button>
             <Button
@@ -176,9 +194,10 @@ const Header: React.FC = () => {
                 aria-label="Menu"
               />
               <MenuList>
-                <MenuItem onClick={() => navigate('/')}>Dashboard</MenuItem>
+                <MenuItem onClick={handleDashboardClick}>Dashboard</MenuItem>
                 <MenuItem onClick={() => navigate('/search')}>Search</MenuItem>
                 <MenuItem onClick={onOpen}>Add Bookmark</MenuItem>
+                <MenuItem icon={<FaFolder />} onClick={handleOpenFolders}>Folders</MenuItem>
                 <MenuItem onClick={() => navigate('/account')}>Account Settings</MenuItem>
                 <MenuItem onClick={toggleColorMode}>
                   {colorMode === 'light' ? 'Dark Mode' : 'Light Mode'}
@@ -192,12 +211,18 @@ const Header: React.FC = () => {
       </Container>
 
       {/* Add Bookmark Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal isOpen={isOpen} onClose={handleModalClose}>
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Add New Bookmark</ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
+            {error && (
+              <Alert status="error" mb={4}>
+                <AlertIcon />
+                {error}
+              </Alert>
+            )}
             <FormControl>
               <FormLabel>URL</FormLabel>
               <Input

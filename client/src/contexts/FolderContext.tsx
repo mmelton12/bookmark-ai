@@ -1,15 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { folderAPI } from '../services/api';
-
-interface Folder {
-  _id: string;
-  name: string;
-  description: string;
-  color: string;
-  icon: string;
-  parent: string | null;
-  subfolders: Folder[];
-}
+import { Folder } from '../types';
 
 interface FolderContextType {
   folders: Folder[];

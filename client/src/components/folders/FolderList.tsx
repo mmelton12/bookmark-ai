@@ -12,6 +12,7 @@ import {
   Icon,
   Spinner,
   useColorModeValue,
+  Badge,
 } from '@chakra-ui/react';
 import { FaFolder, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
@@ -24,6 +25,7 @@ interface Folder {
   icon: string;
   parent: string | null;
   subfolders: Folder[];
+  bookmarkCount: number;
 }
 
 interface FolderItemProps {
@@ -56,7 +58,12 @@ const FolderItem: React.FC<FolderItemProps> = ({ folder, level, onEdit, onDelete
         mr={2}
       />
       <Box flex={1}>
-        <Text fontWeight="medium">{folder.name}</Text>
+        <Box display="flex" alignItems="center">
+          <Text fontWeight="medium">{folder.name}</Text>
+          <Badge ml={2} colorScheme="blue" variant="subtle">
+            {folder.bookmarkCount || 0}
+          </Badge>
+        </Box>
         {folder.description && (
           <Text fontSize="sm" color="gray.500">
             {folder.description}
