@@ -28,6 +28,20 @@ const bookmarkSchema = new mongoose.Schema({
         type: String,
         trim: true
     }],
+    folder: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Folder',
+        default: null
+    },
+    category: {
+        type: String,
+        enum: ['Article', 'Video', 'Research', 'Other'],
+        default: 'Other'
+    },
+    isFavorite: {
+        type: Boolean,
+        default: false
+    },
     user: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',
@@ -47,10 +61,13 @@ const bookmarkSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Create compound index for efficient searching
+// Create compound indexes for efficient searching
 bookmarkSchema.index({ tags: 1, user: 1 });
 bookmarkSchema.index({ user: 1, createdAt: -1 });
 bookmarkSchema.index({ title: 'text', description: 'text', aiSummary: 'text' });
+bookmarkSchema.index({ folder: 1, user: 1 });
+bookmarkSchema.index({ category: 1, user: 1 });
+bookmarkSchema.index({ isFavorite: 1, user: 1 });
 
 // Pre-save middleware to ensure tags array exists
 bookmarkSchema.pre('save', function(next) {

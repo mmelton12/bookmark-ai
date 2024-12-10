@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, AuthResponse, UserUpdateInput, Bookmark } from '../types';
+import { User, AuthResponse, UserUpdateInput, Bookmark, PaginatedResponse, TagCount, BookmarkStats, SearchParams } from '../types';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -19,27 +19,6 @@ axios.interceptors.request.use(
         return Promise.reject(error);
     }
 );
-
-interface SearchParams {
-    query?: string;
-    tags?: string[];
-    page?: number;
-}
-
-interface SearchResponse {
-    data: Bookmark[];
-    hasMore: boolean;
-}
-
-interface TagCount {
-    name: string;
-    count: number;
-}
-
-interface BookmarkStats {
-    totalBookmarks: number;
-    tagsCount: number;
-}
 
 // Auth API
 export const authAPI = {
@@ -76,33 +55,49 @@ export const authAPI = {
 
 // Bookmark API
 export const bookmarkAPI = {
-    getBookmarks: () => 
-        axios.get<Bookmark[]>(`${API_URL}/bookmarks`),
+    getBookmarks: (folderId?: string | null): Promise<PaginatedResponse<Bookmark>> => 
+        axios.get(`${API_URL}/bookmarks`, {
+            params: { folderId }
+        }).then(res => res.data),
 
-    search: (params: SearchParams) => {
-        // Convert tags array to comma-separated string
+    search: (params: SearchParams): Promise<PaginatedResponse<Bookmark>> => {
         const searchParams = {
             ...params,
             tags: params.tags?.join(',')
         };
-        return axios.get<SearchResponse>(`${API_URL}/bookmarks/search`, { params: searchParams })
+        return axios.get(`${API_URL}/bookmarks/search`, { params: searchParams })
             .then(response => response.data);
     },
 
-    create: (url: string) => 
-        axios.post<Bookmark>(`${API_URL}/bookmarks`, { url }),
+    create: (url: string): Promise<Bookmark> => 
+        axios.post(`${API_URL}/bookmarks`, { url }).then(res => res.data),
 
-    delete: (id: string) => 
-        axios.delete(`${API_URL}/bookmarks/${id}`),
+    delete: (id: string): Promise<void> => 
+        axios.delete(`${API_URL}/bookmarks/${id}`).then(res => res.data),
 
-    updateBookmark: (id: string, updates: any) => 
-        axios.put<Bookmark>(`${API_URL}/bookmarks/${id}`, updates),
+    updateBookmark: (id: string, updates: Partial<Bookmark>): Promise<Bookmark> => 
+        axios.put(`${API_URL}/bookmarks/${id}`, updates).then(res => res.data),
 
     getTags: (): Promise<TagCount[]> =>
         axios.get(`${API_URL}/bookmarks/tags`).then(res => res.data),
         
     getStats: (): Promise<BookmarkStats> =>
         axios.get(`${API_URL}/bookmarks/stats`).then(res => res.data)
+};
+
+// Folder API
+export const folderAPI = {
+    getFolders: () => 
+        axios.get(`${API_URL}/folders`).then(res => res.data),
+
+    createFolder: (data: any) =>
+        axios.post(`${API_URL}/folders`, data).then(res => res.data),
+
+    updateFolder: (id: string, data: any) =>
+        axios.put(`${API_URL}/folders/${id}`, data).then(res => res.data),
+
+    deleteFolder: (id: string) =>
+        axios.delete(`${API_URL}/folders/${id}`).then(res => res.data)
 };
 
 // Chat API
@@ -116,7 +111,7 @@ export const chatAPI = {
         }
 
         try {
-            console.log('Sending chat request with API key length:', apiKey.length); // Debug log
+            console.log('Sending chat request with API key length:', apiKey.length);
             const response = await axios.post<{ reply: string }>(
                 `${API_URL}/chat/chat`,
                 {
@@ -126,15 +121,13 @@ export const chatAPI = {
                 {
                     headers: {
                         'Content-Type': 'application/json',
-                        // Ensure Authorization header is included from interceptor
                     }
                 }
             );
             return response.data;
         } catch (error) {
-            console.error('Chat API error:', error); // Debug log
+            console.error('Chat API error:', error);
             if (axios.isAxiosError(error)) {
-                // Extract error message from response if available
                 const errorMessage = error.response?.data?.error || error.message;
                 throw new Error(errorMessage);
             }
@@ -142,3 +135,13 @@ export const chatAPI = {
         }
     }
 };
+
+// Export all APIs as a single object
+export const api = {
+    auth: authAPI,
+    bookmarks: bookmarkAPI,
+    folders: folderAPI,
+    chat: chatAPI
+};
+
+export default api;

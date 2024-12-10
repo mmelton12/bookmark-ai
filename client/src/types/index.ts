@@ -13,11 +13,14 @@ export interface Bookmark {
   _id: string;
   url: string;
   title: string;
-  description?: string;
-  aiSummary?: string;
+  description: string;
+  aiSummary: string;
   tags: string[];
+  folder: string | null;
+  category: 'Article' | 'Video' | 'Research' | 'Other';
+  isFavorite: boolean;
   warning?: string;
-  userId: string;
+  user: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,6 +49,9 @@ export interface BookmarkUpdateInput {
   title?: string;
   description?: string;
   tags?: string[];
+  folder?: string | null;
+  category?: 'Article' | 'Video' | 'Research' | 'Other';
+  isFavorite?: boolean;
 }
 
 export interface SearchFilters {
@@ -55,6 +61,9 @@ export interface SearchFilters {
   endDate?: string;
   page?: number;
   limit?: number;
+  folder?: string | null;
+  category?: 'Article' | 'Video' | 'Research' | 'Other';
+  isFavorite?: boolean;
 }
 
 export interface PaginatedResponse<T> {
@@ -80,4 +89,23 @@ export interface UserUpdateInput {
 export interface PasswordUpdateInput {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface TagCount {
+  name: string;
+  count: number;
+}
+
+export interface BookmarkStats {
+  totalBookmarks: number;
+  tagsCount: number;
+}
+
+export interface SearchParams {
+  query?: string;
+  tags?: string[];
+  page?: number;
+  folderId?: string | null;
+  favorite?: boolean;
+  category?: 'Article' | 'Video' | 'Research' | 'Other';
 }

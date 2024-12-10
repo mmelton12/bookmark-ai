@@ -1,239 +1,250 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  VStack,
-  Heading,
-  Button,
-  useToast,
-  Input,
-  FormControl,
-  FormLabel,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  Text,
   Box,
-  Spinner,
-  Center,
-  Tag,
+  VStack,
   HStack,
-  CloseButton,
+  Text,
+  IconButton,
+  Checkbox,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Button,
+  Tag,
+  Spinner,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { Bookmark } from '../../types';
+import {
+  FaEllipsisV,
+  FaFolderOpen,
+  FaTag,
+  FaTrash,
+  FaStar,
+  FaRegStar,
+} from 'react-icons/fa';
+import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
-import BookmarkCard from './BookmarkCard';
-import { useSearch } from '../../contexts/SearchContext';
+import { Bookmark } from '../../types';
 
-const BookmarkList: React.FC = () => {
+interface BookmarkListProps {
+  onMove: (bookmarkIds: string[]) => void;
+  onTag: (bookmarkIds: string[]) => void;
+}
+
+const BookmarkList: React.FC<BookmarkListProps> = ({ onMove, onTag }) => {
+  const { selectedFolder } = useFolder();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [newBookmarkUrl, setNewBookmarkUrl] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const toast = useToast();
-  const { searchQuery, selectedTags, setSelectedTags } = useSearch();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([]);
 
-  const fetchBookmarks = useCallback(async (pageNum: number = 1) => {
-    try {
-      setIsLoading(true);
-      const response = await bookmarkAPI.search({
-        query: searchQuery,
-        tags: selectedTags,
-        page: pageNum,
-      });
-      
-      if (pageNum === 1) {
-        setBookmarks(response.data);
-      } else {
-        setBookmarks(prev => [...prev, ...response.data]);
-      }
-      setHasMore(response.hasMore);
-      setPage(pageNum);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to fetch bookmarks',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      if (pageNum === 1) {
-        setBookmarks([]);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery, selectedTags, toast]);
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  const handleAddBookmark = async () => {
-    if (!newBookmarkUrl.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a URL',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      await bookmarkAPI.create(newBookmarkUrl);
-      setNewBookmarkUrl('');
-      onClose();
-      await fetchBookmarks(1);
-      toast({
-        title: 'Success',
-        description: 'Bookmark added successfully',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add bookmark',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteBookmark = async (id: string) => {
-    try {
-      await bookmarkAPI.delete(id);
-      await fetchBookmarks(1);
-      toast({
-        title: 'Success',
-        description: 'Bookmark deleted successfully',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete bookmark',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handleTagClick = (tag: string) => {
-    if (!selectedTags.includes(tag)) {
-      setSelectedTags([tag]); // Only show the clicked tag
-      setPage(1); // Reset to first page when changing tags
-    }
-  };
-
-  const handleTagRemove = (tagToRemove: string) => {
-    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
-    setPage(1); // Reset to first page when removing tag filter
-  };
-
-  const loadMore = () => {
-    if (!isLoading && hasMore) {
-      fetchBookmarks(page + 1);
-    }
-  };
-
-  // Fetch bookmarks when search query or selected tags change
   useEffect(() => {
-    setPage(1); // Reset page when filters change
-    fetchBookmarks(1);
-  }, [fetchBookmarks, searchQuery, selectedTags]);
+    fetchBookmarks();
+  }, [selectedFolder]);
+
+  const fetchBookmarks = async () => {
+    try {
+      setLoading(true);
+      const response = await bookmarkAPI.getBookmarks(selectedFolder);
+      setBookmarks(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch bookmarks');
+      console.error('Error fetching bookmarks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckboxChange = (bookmarkId: string) => {
+    setSelectedBookmarks(prev => {
+      if (prev.includes(bookmarkId)) {
+        return prev.filter(id => id !== bookmarkId);
+      }
+      return [...prev, bookmarkId];
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedBookmarks.length) return;
+    if (window.confirm('Are you sure you want to delete the selected bookmarks?')) {
+      try {
+        await Promise.all(selectedBookmarks.map(id => bookmarkAPI.delete(id)));
+        await fetchBookmarks();
+        setSelectedBookmarks([]);
+      } catch (error) {
+        console.error('Failed to delete bookmarks:', error);
+      }
+    }
+  };
+
+  const handleToggleFavorite = async (bookmarkId: string) => {
+    try {
+      const bookmark = bookmarks.find(b => b._id === bookmarkId);
+      if (bookmark) {
+        await bookmarkAPI.updateBookmark(bookmarkId, {
+          isFavorite: !bookmark.isFavorite,
+        });
+        await fetchBookmarks();
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+        <Spinner />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={4}>
+        <Text color="red.500">{error}</Text>
+      </Box>
+    );
+  }
+
+  if (!bookmarks.length) {
+    return (
+      <Box p={4}>
+        <Text color="gray.500">No bookmarks in this folder</Text>
+      </Box>
+    );
+  }
 
   return (
-    <VStack spacing={4} align="stretch" w="full" maxW="container.lg" mx="auto" p={4}>
-      <Heading size="lg">Your Bookmarks</Heading>
-      <Button colorScheme="blue" onClick={onOpen} isDisabled={isLoading}>
-        Add New Bookmark
-      </Button>
-
-      {selectedTags.length > 0 && (
-        <HStack spacing={2} flexWrap="wrap">
-          {selectedTags.map((tag) => (
-            <Tag
-              key={tag}
-              size="md"
-              borderRadius="full"
-              variant="solid"
-              colorScheme="blue"
-            >
-              <Box as="span" mr={2}>{tag}</Box>
-              <CloseButton size="sm" onClick={() => handleTagRemove(tag)} />
-            </Tag>
-          ))}
+    <VStack spacing={4} align="stretch">
+      {selectedBookmarks.length > 0 && (
+        <HStack spacing={2} p={4}>
+          <Button
+            leftIcon={<FaTrash />}
+            colorScheme="red"
+            variant="outline"
+            onClick={handleBulkDelete}
+            size="sm"
+          >
+            Delete ({selectedBookmarks.length})
+          </Button>
+          <Button
+            leftIcon={<FaFolderOpen />}
+            colorScheme="blue"
+            variant="outline"
+            onClick={() => onMove(selectedBookmarks)}
+            size="sm"
+          >
+            Move
+          </Button>
+          <Button
+            leftIcon={<FaTag />}
+            colorScheme="green"
+            variant="outline"
+            onClick={() => onTag(selectedBookmarks)}
+            size="sm"
+          >
+            Tag
+          </Button>
         </HStack>
       )}
 
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Add New Bookmark</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <FormControl>
-              <FormLabel>URL</FormLabel>
-              <Input
-                value={newBookmarkUrl}
-                onChange={(e) => setNewBookmarkUrl(e.target.value)}
-                placeholder="Enter URL"
+      <VStack spacing={2} align="stretch">
+        {bookmarks.map((bookmark) => (
+          <Box
+            key={bookmark._id}
+            p={4}
+            borderWidth="1px"
+            borderRadius="md"
+            bg={bgColor}
+            borderColor={borderColor}
+          >
+            <HStack align="flex-start">
+              <Checkbox
+                isChecked={selectedBookmarks.includes(bookmark._id)}
+                onChange={() => handleCheckboxChange(bookmark._id)}
+                mt={1}
               />
-            </FormControl>
-            <Button
-              mt={4}
-              colorScheme="blue"
-              onClick={handleAddBookmark}
-              isLoading={isLoading}
-            >
-              Add Bookmark
-            </Button>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-
-      {isLoading && bookmarks.length === 0 ? (
-        <Center py={8}>
-          <Spinner size="xl" />
-        </Center>
-      ) : bookmarks.length === 0 ? (
-        <Text textAlign="center" color="gray.500">
-          No bookmarks found. Try adjusting your search or filters.
-        </Text>
-      ) : (
-        <>
-          {bookmarks.map((bookmark) => (
-            <BookmarkCard
-              key={bookmark._id}
-              bookmark={bookmark}
-              onDelete={handleDeleteBookmark}
-              onTagClick={handleTagClick}
-            />
-          ))}
-          {hasMore && (
-            <Box textAlign="center" py={4}>
-              <Button
-                onClick={loadMore}
-                isLoading={isLoading}
-                loadingText="Loading more..."
-              >
-                Load More
-              </Button>
-            </Box>
-          )}
-        </>
-      )}
+              <Box flex={1}>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontWeight="bold" fontSize="lg">
+                    {bookmark.title}
+                  </Text>
+                  <HStack>
+                    <IconButton
+                      aria-label={bookmark.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      icon={bookmark.isFavorite ? <FaStar /> : <FaRegStar />}
+                      color={bookmark.isFavorite ? 'yellow.400' : 'gray.400'}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleFavorite(bookmark._id)}
+                    />
+                    <Menu>
+                      <MenuButton
+                        as={IconButton}
+                        aria-label="Options"
+                        icon={<FaEllipsisV />}
+                        variant="ghost"
+                        size="sm"
+                      />
+                      <MenuList>
+                        <MenuItem
+                          icon={<FaFolderOpen />}
+                          onClick={() => onMove([bookmark._id])}
+                        >
+                          Move
+                        </MenuItem>
+                        <MenuItem
+                          icon={<FaTag />}
+                          onClick={() => onTag([bookmark._id])}
+                        >
+                          Edit Tags
+                        </MenuItem>
+                        <MenuItem
+                          icon={<FaTrash />}
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this bookmark?')) {
+                              try {
+                                await bookmarkAPI.delete(bookmark._id);
+                                await fetchBookmarks();
+                              } catch (error) {
+                                console.error('Failed to delete bookmark:', error);
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </MenuItem>
+                      </MenuList>
+                    </Menu>
+                  </HStack>
+                </HStack>
+                <Text color="blue.500" mb={2}>
+                  {bookmark.url}
+                </Text>
+                <Text mb={3}>{bookmark.description}</Text>
+                <HStack spacing={2} wrap="wrap">
+                  {bookmark.tags.map((tag) => (
+                    <Tag key={tag} size="sm">
+                      {tag}
+                    </Tag>
+                  ))}
+                  {bookmark.category && (
+                    <Tag size="sm" colorScheme="blue">
+                      {bookmark.category}
+                    </Tag>
+                  )}
+                </HStack>
+              </Box>
+            </HStack>
+          </Box>
+        ))}
+      </VStack>
     </VStack>
   );
 };

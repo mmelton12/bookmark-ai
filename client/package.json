@@ -9,6 +9,8 @@
     "@chakra-ui/theme-tools": "^2.2.6",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.1.10",
+    "@mui/material": "^6.1.10",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.7.9",
     "cra-template-typescript": "1.2.0",

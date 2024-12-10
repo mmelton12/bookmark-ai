@@ -11,6 +11,7 @@ require('./config/passport');
 // Import routes
 const authRoutes = require('./routes/auth');
 const bookmarkRoutes = require('./routes/bookmarks');
+const folderRoutes = require('./routes/folders');
 const chatRoutes = require('./routes/chat');
 
 // Initialize express
@@ -45,6 +46,7 @@ app.use(passport.session());
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/folders', folderRoutes);
 app.use('/api/chat', chatRoutes);
 
 // Basic route

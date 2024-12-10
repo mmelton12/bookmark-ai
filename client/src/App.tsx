@@ -3,9 +3,10 @@ import { ChakraProvider, Box } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SearchProvider } from './contexts/SearchContext';
+import { FolderProvider } from './contexts/FolderContext';
 import LoginForm from './components/auth/LoginForm';
 import SignupForm from './components/auth/SignupForm';
-import BookmarkList from './components/bookmarks/BookmarkList';
+import BookmarkManager from './components/bookmarks/BookmarkManager';
 import AccountSettings from './components/account/AccountSettings';
 import SearchPage from './components/search/SearchPage';
 import ChatPage from './components/chat/ChatPage';
@@ -25,8 +26,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   return (
     <SearchProvider>
-      <Header />
-      {children}
+      <FolderProvider>
+        <Header />
+        {children}
+      </FolderProvider>
     </SearchProvider>
   );
 };
@@ -122,8 +125,8 @@ const AppRoutes: React.FC = () => {
           path="/"
           element={
             <ProtectedRouteWrapper>
-              <Box p={8}>
-                <BookmarkList />
+              <Box p={4} height="calc(100vh - 64px)">
+                <BookmarkManager />
               </Box>
             </ProtectedRouteWrapper>
           }
