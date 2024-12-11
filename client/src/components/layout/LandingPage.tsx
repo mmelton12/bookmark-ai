@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Container, Heading, Text, VStack, HStack, Icon, SimpleGrid, useColorModeValue, Image, Divider, Avatar } from '@chakra-ui/react';
-import { FaBrain, FaSearch, FaTags, FaBookmark, FaRegLightbulb, FaRegClock, FaRegChartBar, FaRegComments, FaChrome, FaCog, FaFolderOpen, FaRocket } from 'react-icons/fa';
+import { FaBrain, FaSearch, FaTags, FaBookmark, FaRegLightbulb, FaRegClock, FaRegChartBar, FaRegComments, FaChrome, FaCog, FaFolderOpen, FaRocket, FaFirefox, FaSafari, FaEdge } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, title, text }) => {
@@ -26,7 +26,7 @@ const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, t
   );
 };
 
-const Step: React.FC<{ number: number; title: string; description: string; icon: any }> = ({ number, title, description, icon }) => {
+const Step: React.FC<{ number: number; title: string; description: string; icon: any; icons?: any[] }> = ({ number, title, description, icon, icons }) => {
   const bgGradient = useColorModeValue(
     'linear(to-br, blue.50, blue.100)',
     'linear(to-br, blue.900, blue.800)'
@@ -102,6 +102,13 @@ const Step: React.FC<{ number: number; title: string; description: string; icon:
           <Text color={useColorModeValue('gray.600', 'gray.300')} fontSize="lg">
             {description}
           </Text>
+          {icons && (
+            <HStack spacing={4} mt={2}>
+              {icons.map((IconComponent, index) => (
+                <Icon key={index} as={IconComponent} w={6} h={6} color="blue.500" />
+              ))}
+            </HStack>
+          )}
         </VStack>
       </HStack>
     </Box>
@@ -202,7 +209,7 @@ const LandingPage: React.FC = () => {
             Intelligence
           </Heading>
           <Text fontSize={{ base: 'lg', md: 'xl' }} color={textColor} maxW="2xl">
-            Automatically organize, tag, and summarize your bookmarks using advanced AI. 
+            Import your existing browser bookmarks instantly and let AI organize, tag, and summarize them.
             Never lose track of important content again.
           </Text>
           <HStack spacing={4} pt={4}>
@@ -232,6 +239,11 @@ const LandingPage: React.FC = () => {
       <SectionWrapper alternate>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
           <Feature
+            icon={FaBookmark}
+            title="Easy Import"
+            text="Import your existing bookmarks from Chrome, Firefox, Safari, or Edge with just one click."
+          />
+          <Feature
             icon={FaBrain}
             title="AI-Powered Summaries"
             text="Get instant AI-generated summaries of your bookmarked content, saving you valuable time."
@@ -245,11 +257,6 @@ const LandingPage: React.FC = () => {
             icon={FaSearch}
             title="Intelligent Search"
             text="Find any bookmark instantly with our powerful search functionality across tags and summaries."
-          />
-          <Feature
-            icon={FaBookmark}
-            title="Clean Interface"
-            text="Enjoy a minimalist, distraction-free interface designed for productivity."
           />
         </SimpleGrid>
       </SectionWrapper>
@@ -272,7 +279,7 @@ const LandingPage: React.FC = () => {
               color={useColorModeValue('gray.600', 'gray.300')}
               maxW="2xl"
             >
-              Get started in minutes with our simple four-step process
+              Get started in minutes with our simple process
             </Text>
           </VStack>
           
@@ -280,15 +287,16 @@ const LandingPage: React.FC = () => {
             <VStack spacing={6} align="stretch" position="relative">
               <Step
                 number={1}
-                icon={FaChrome}
-                title="Save Your Bookmarks"
-                description="Simply add your bookmarks to BookmarkAI using our browser extension or paste the URL."
+                icon={FaBookmark}
+                title="Import Your Bookmarks"
+                description="Import your existing bookmarks from any major browser. We support Chrome, Firefox, Safari, and Edge."
+                icons={[FaChrome, FaFirefox, FaSafari, FaEdge]}
               />
               <Step
                 number={2}
                 icon={FaBrain}
                 title="AI Processing"
-                description="Our AI automatically analyzes the content, generates summaries, and creates relevant tags."
+                description="Our AI automatically analyzes your bookmarks, generates summaries, and creates relevant tags."
               />
               <Step
                 number={3}
@@ -314,8 +322,8 @@ const LandingPage: React.FC = () => {
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
             <Feature
               icon={FaRegLightbulb}
-              title="Enhanced Productivity"
-              text="Save hours of manual organization with AI-powered automation and smart categorization."
+              title="Seamless Import"
+              text="Import your existing browser bookmarks in seconds - no manual work required."
             />
             <Feature
               icon={FaRegClock}
@@ -344,17 +352,17 @@ const LandingPage: React.FC = () => {
             <Testimonial
               name="Sarah Johnson"
               role="Content Creator"
-              content="BookmarkAI has revolutionized how I organize my research. The AI summaries save me hours of reading time!"
+              content="Importing my Chrome bookmarks was a breeze! BookmarkAI organized everything perfectly and the AI summaries save me hours of reading time."
             />
             <Testimonial
               name="Michael Chen"
               role="Software Developer"
-              content="The smart tagging feature is incredible. I can find any technical resource in seconds now."
+              content="The browser import feature is fantastic. All my Firefox bookmarks were instantly organized and tagged. Finding resources is so much easier now."
             />
             <Testimonial
               name="Emily Rodriguez"
               role="Digital Marketer"
-              content="This tool has become essential for my workflow. The AI-powered organization is simply amazing."
+              content="I imported thousands of bookmarks from multiple browsers and BookmarkAI handled them flawlessly. The AI-powered organization is simply amazing."
             />
           </SimpleGrid>
         </VStack>
@@ -365,7 +373,7 @@ const LandingPage: React.FC = () => {
         <VStack spacing={8} textAlign="center">
           <Heading>Ready to Transform Your Bookmarks?</Heading>
           <Text fontSize="xl" maxW="2xl" mx="auto" color={textColor}>
-            Join thousands of users who have already revolutionized their bookmark management with AI.
+            Import your browser bookmarks now and let AI organize them for you. Join thousands of users who have already revolutionized their bookmark management.
           </Text>
           <Button
             size="lg"
