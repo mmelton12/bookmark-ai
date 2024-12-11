@@ -22,6 +22,7 @@ import {
   FaTrash,
   FaStar,
   FaRegStar,
+  FaBookmark,
 } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
@@ -30,16 +31,20 @@ import { Bookmark } from '../../types';
 interface BookmarkListProps {
   onMove: (bookmarkIds: string[]) => void;
   onTag: (bookmarkIds: string[]) => void;
+  onCategory: (bookmarkIds: string[]) => void;
   searchQuery?: string;
   selectedTag?: string | null;
+  selectedCategory?: 'Article' | 'Video' | 'Research' | null;
   onTagClick?: (tag: string) => void;
 }
 
 const BookmarkList: React.FC<BookmarkListProps> = ({ 
   onMove, 
-  onTag, 
+  onTag,
+  onCategory,
   searchQuery = '', 
   selectedTag = null,
+  selectedCategory = undefined,
   onTagClick
 }) => {
   const { selectedFolder, refreshFolders } = useFolder();
@@ -56,12 +61,13 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       setLoading(true);
       let response;
       
-      if (searchQuery || selectedTag) {
-        // Use search endpoint when there's a search query or selected tag
+      if (searchQuery || selectedTag || selectedCategory) {
+        // Use search endpoint when there's a search query, selected tag, or category
         response = await bookmarkAPI.search({
           query: searchQuery,
           tags: selectedTag ? [selectedTag] : [],
-          folderId: selectedFolder
+          folderId: selectedFolder,
+          category: selectedCategory
         });
       } else {
         // Use regular getBookmarks endpoint when no search/filter is active
@@ -76,7 +82,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedFolder, searchQuery, selectedTag]);
+  }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
 
   useEffect(() => {
     fetchBookmarks();
@@ -116,6 +122,19 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       }
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  const getCategoryColor = (category: 'Article' | 'Video' | 'Research'): string => {
+    switch (category) {
+      case 'Article':
+        return 'purple';
+      case 'Video':
+        return 'red';
+      case 'Research':
+        return 'green';
+      default:
+        return 'gray';
     }
   };
 
@@ -174,6 +193,15 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
           >
             Tag
           </Button>
+          <Button
+            leftIcon={<FaBookmark />}
+            colorScheme="purple"
+            variant="outline"
+            onClick={() => onCategory(selectedBookmarks)}
+            size="sm"
+          >
+            Category
+          </Button>
         </HStack>
       )}
 
@@ -231,6 +259,12 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                           Edit Tags
                         </MenuItem>
                         <MenuItem
+                          icon={<FaBookmark />}
+                          onClick={() => onCategory([bookmark._id])}
+                        >
+                          Change Category
+                        </MenuItem>
+                        <MenuItem
                           icon={<FaTrash />}
                           onClick={async () => {
                             if (window.confirm('Are you sure you want to delete this bookmark?')) {
@@ -257,22 +291,28 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                 </Text>
                 <Text mb={3}>{bookmark.aiSummary || bookmark.description}</Text>
                 <HStack spacing={2} wrap="wrap">
+                  {bookmark.category && (
+                    <Tag 
+                      size="sm" 
+                      colorScheme={getCategoryColor(bookmark.category)}
+                      variant="solid"
+                      mr={2}
+                    >
+                      {bookmark.category}
+                    </Tag>
+                  )}
                   {bookmark.tags.map((tag) => (
                     <Tag 
                       key={tag} 
                       size="sm" 
                       cursor="pointer"
                       colorScheme="blue"
+                      variant="subtle"
                       onClick={() => onTagClick?.(tag)}
                     >
                       {tag}
                     </Tag>
                   ))}
-                  {bookmark.category && (
-                    <Tag size="sm" colorScheme="blue">
-                      {bookmark.category}
-                    </Tag>
-                  )}
                 </HStack>
               </Box>
             </HStack>

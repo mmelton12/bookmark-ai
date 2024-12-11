@@ -15,12 +15,15 @@ router.post('/', [
     body('url').isURL().withMessage('Please provide a valid URL')
 ], async (req, res) => {
     try {
+        console.log('Starting bookmark creation process...');
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('Validation errors:', errors.array());
             return res.status(400).json({ errors: errors.array() });
         }
 
         const { url } = req.body;
+        console.log('Creating bookmark for URL:', url);
 
         // Check for existing bookmark with same URL for this user
         const existingBookmark = await Bookmark.findOne({ 
@@ -29,38 +32,84 @@ router.post('/', [
         });
 
         if (existingBookmark) {
+            console.log('Bookmark already exists for URL:', url);
             return res.status(400).json({
                 message: 'This URL has already been bookmarked'
             });
         }
 
         // Get user with OpenAI key
+        console.log('Fetching user OpenAI key...');
         const user = await User.findById(req.user.id).select('+openAiKey');
         if (!user.openAiKey) {
+            console.log('No OpenAI key found for user');
             return res.status(400).json({
                 message: 'OpenAI API key is required. Please add it in your account settings.'
             });
         }
 
         // Fetch content from URL
-        const { title, content, description } = await fetchContent(url);
+        console.log('Fetching content from URL...');
+        let fetchedContent;
+        try {
+            fetchedContent = await fetchContent(url);
+            console.log('Content fetched successfully:', {
+                titleLength: fetchedContent.title.length,
+                contentLength: fetchedContent.content.length
+            });
+        } catch (error) {
+            console.error('Error fetching content:', error);
+            return res.status(400).json({
+                message: error.message || 'Failed to fetch content from URL'
+            });
+        }
 
-        // Generate AI summary and tags
-        const { summary, tags } = await analyzeContent(url, content, user.openAiKey);
+        // Generate AI summary, tags, and determine category
+        console.log('Analyzing content with OpenAI...');
+        let analysisResult;
+        try {
+            analysisResult = await analyzeContent(url, fetchedContent.content, user.openAiKey);
+            console.log('Content analysis complete:', {
+                summaryLength: analysisResult.summary.length,
+                tagsCount: analysisResult.tags.length,
+                category: analysisResult.category,
+                tags: analysisResult.tags
+            });
+        } catch (error) {
+            console.error('Error analyzing content:', error);
+            return res.status(500).json({
+                message: 'Failed to analyze content'
+            });
+        }
 
         // Create bookmark
-        const bookmark = await Bookmark.create({
-            url,
-            title,
-            description,
-            aiSummary: summary,
-            tags,
-            user: req.user.id
-        });
+        console.log('Creating bookmark in database with tags:', analysisResult.tags);
+        try {
+            const bookmark = await Bookmark.create({
+                url,
+                title: fetchedContent.title,
+                description: fetchedContent.description,
+                aiSummary: analysisResult.summary,
+                tags: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
+                category: analysisResult.category,
+                user: req.user.id
+            });
 
-        res.status(201).json(bookmark);
+            console.log('Bookmark created successfully:', {
+                id: bookmark._id,
+                title: bookmark.title,
+                tags: bookmark.tags,
+                category: bookmark.category
+            });
+            res.status(201).json(bookmark);
+        } catch (error) {
+            console.error('Error saving bookmark:', error);
+            return res.status(500).json({
+                message: 'Failed to save bookmark'
+            });
+        }
     } catch (error) {
-        console.error('Error creating bookmark:', error);
+        console.error('Unexpected error in bookmark creation:', error);
         res.status(500).json({
             message: error.message || 'Failed to create bookmark'
         });
@@ -307,7 +356,7 @@ router.put('/:id', protect, async (req, res) => {
 // Delete bookmark route
 router.delete('/:id', protect, async (req, res) => {
     try {
-        const bookmark = await Bookmark.findOne({
+        const bookmark = await Bookmark.findOneAndDelete({
             _id: req.params.id,
             user: req.user.id
         });
@@ -316,7 +365,6 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ message: 'Bookmark not found' });
         }
 
-        await bookmark.remove();
         res.json({ message: 'Bookmark removed' });
     } catch (error) {
         console.error(error);

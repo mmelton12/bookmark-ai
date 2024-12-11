@@ -35,8 +35,8 @@ const bookmarkSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['Article', 'Video', 'Research', 'Other'],
-        default: 'Other'
+        enum: ['Article', 'Video', 'Research'],
+        default: 'Article'
     },
     isFavorite: {
         type: Boolean,

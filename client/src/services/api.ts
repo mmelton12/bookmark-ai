@@ -20,6 +20,19 @@ axios.interceptors.request.use(
     }
 );
 
+// Add response interceptor for better error handling
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error('API Error:', {
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message,
+            endpoint: error.config?.url
+        });
+        return Promise.reject(error);
+    }
+);
+
 // Auth API
 export const authAPI = {
     login: (email: string, password: string): Promise<AuthResponse> => 
@@ -69,8 +82,21 @@ export const bookmarkAPI = {
             .then(response => response.data);
     },
 
-    create: (url: string): Promise<Bookmark> => 
-        axios.post(`${API_URL}/bookmarks`, { url }).then(res => res.data),
+    create: async (url: string): Promise<Bookmark> => {
+        try {
+            console.log('Creating bookmark for URL:', url);
+            const response = await axios.post(`${API_URL}/bookmarks`, { url });
+            console.log('Bookmark created successfully:', response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error('Error creating bookmark:', {
+                status: error.response?.status,
+                message: error.response?.data?.message || error.message,
+                url
+            });
+            throw new Error(error.response?.data?.message || 'Failed to create bookmark');
+        }
+    },
 
     delete: (id: string): Promise<void> => 
         axios.delete(`${API_URL}/bookmarks/${id}`).then(res => res.data),
@@ -84,11 +110,26 @@ export const bookmarkAPI = {
     getStats: (): Promise<BookmarkStats> =>
         axios.get(`${API_URL}/bookmarks/stats`).then(res => res.data),
 
-    bulkUpdate: (bookmarkIds: string[], data: { action: string, [key: string]: any }): Promise<void> =>
-        axios.post(`${API_URL}/bookmarks/bulk`, {
-            bookmarkIds,
-            ...data
-        }).then(res => res.data)
+    bulkUpdate: async (bookmarkIds: string[], data: { action: string, [key: string]: any }): Promise<void> => {
+        try {
+            console.log('Performing bulk update:', {
+                action: data.action,
+                bookmarkCount: bookmarkIds.length
+            });
+            const response = await axios.post(`${API_URL}/bookmarks/bulk`, {
+                bookmarkIds,
+                ...data
+            });
+            console.log('Bulk update successful');
+            return response.data;
+        } catch (error: any) {
+            console.error('Bulk update failed:', {
+                action: data.action,
+                error: error.response?.data?.message || error.message
+            });
+            throw new Error(error.response?.data?.message || 'Failed to perform bulk operation');
+        }
+    }
 };
 
 // Folder API

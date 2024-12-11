@@ -3,7 +3,6 @@ import {
   Box,
   Flex,
   Button,
-  Heading,
   Container,
   IconButton,
   Menu,
@@ -29,6 +28,8 @@ import {
   useToast,
   Alert,
   AlertIcon,
+  Progress,
+  Image,
 } from '@chakra-ui/react';
 import { HamburgerIcon, SunIcon, MoonIcon, SearchIcon, SettingsIcon, AddIcon } from '@chakra-ui/icons';
 import { FaFolder } from 'react-icons/fa';
@@ -68,9 +69,20 @@ const Header: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      await bookmarkAPI.create(newBookmarkUrl);
+
+      // Add http:// if no protocol is specified
+      let url = newBookmarkUrl;
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'http://' + url;
+      }
+
+      const bookmark = await bookmarkAPI.create(url);
       setNewBookmarkUrl('');
       onClose();
+      
+      // Dispatch bookmark creation event
+      window.dispatchEvent(new Event('bookmarkCreated'));
+      
       toast({
         title: 'Success',
         description: 'Bookmark added successfully',
@@ -78,14 +90,20 @@ const Header: React.FC = () => {
         duration: 5000,
         isClosable: true,
       });
-      // Refresh the current page to show the new bookmark
-      window.location.reload();
+
+      // Navigate to dashboard to show the new bookmark
+      if (window.location.pathname !== '/dashboard') {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
+      console.error('Error adding bookmark:', error);
       // Check for duplicate bookmark error
-      if (error.response?.data?.message === 'This URL has already been bookmarked') {
+      if (error.message === 'This URL has already been bookmarked') {
         setError('This URL has already been bookmarked');
+      } else if (error.message.includes('OpenAI API key')) {
+        setError('Please add your OpenAI API key in Account Settings');
       } else {
-        setError(error.response?.data?.message || 'Failed to add bookmark');
+        setError(error.message || 'Failed to add bookmark');
       }
     } finally {
       setIsLoading(false);
@@ -118,14 +136,25 @@ const Header: React.FC = () => {
     >
       <Container maxW="container.xl">
         <Flex py={4} alignItems="center" justifyContent="space-between">
-          <Heading
-            size="md"
+          <Flex
+            alignItems="center"
             cursor="pointer"
             onClick={handleDashboardClick}
-            color="brand.500"
           >
-            BookmarkAI
-          </Heading>
+            <Image
+              src="/logo-bookmarkai.svg"
+              alt="BookmarkAI Logo"
+              height="32px"
+              mr={2}
+            />
+            <Text
+              fontSize="xl"
+              fontWeight="bold"
+              color="brand.500"
+            >
+              BookmarkAI
+            </Text>
+          </Flex>
 
           <Flex alignItems="center" display={{ base: 'none', md: 'flex' }}>
             <Button variant="ghost" mr={2} onClick={handleDashboardClick}>
@@ -229,13 +258,28 @@ const Header: React.FC = () => {
                 value={newBookmarkUrl}
                 onChange={(e) => setNewBookmarkUrl(e.target.value)}
                 placeholder="Enter URL"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddBookmark();
+                  }
+                }}
               />
             </FormControl>
+            {isLoading && (
+              <Box mt={4}>
+                <Text mb={2} fontSize="sm" color="gray.600">
+                  Analyzing content and generating summary...
+                </Text>
+                <Progress size="xs" isIndeterminate />
+              </Box>
+            )}
             <Button
               mt={4}
               colorScheme="blue"
               onClick={handleAddBookmark}
               isLoading={isLoading}
+              width="100%"
             >
               Add Bookmark
             </Button>

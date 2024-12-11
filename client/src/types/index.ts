@@ -28,7 +28,7 @@ export interface Bookmark {
   aiSummary: string;
   tags: string[];
   folder: string | null;
-  category: 'Article' | 'Video' | 'Research' | 'Other';
+  category: 'Article' | 'Video' | 'Research';
   isFavorite: boolean;
   warning?: string;
   user: string;
@@ -61,7 +61,7 @@ export interface BookmarkUpdateInput {
   description?: string;
   tags?: string[];
   folder?: string | null;
-  category?: 'Article' | 'Video' | 'Research' | 'Other';
+  category?: 'Article' | 'Video' | 'Research';
   isFavorite?: boolean;
 }
 
@@ -73,7 +73,7 @@ export interface SearchFilters {
   page?: number;
   limit?: number;
   folder?: string | null;
-  category?: 'Article' | 'Video' | 'Research' | 'Other';
+  category?: 'Article' | 'Video' | 'Research' | null;
   isFavorite?: boolean;
 }
 
@@ -118,5 +118,5 @@ export interface SearchParams {
   page?: number;
   folderId?: string | null;
   favorite?: boolean;
-  category?: 'Article' | 'Video' | 'Research' | 'Other';
+  category?: 'Article' | 'Video' | 'Research' | null;
 }

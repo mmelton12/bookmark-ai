@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, Button, Container, Heading, Text, VStack, HStack, Icon, SimpleGrid, useColorModeValue } from '@chakra-ui/react';
-import { FaBrain, FaSearch, FaTags, FaBookmark } from 'react-icons/fa';
+import { Box, Button, Container, Heading, Text, VStack, HStack, Icon, SimpleGrid, useColorModeValue, Image, Divider, Avatar } from '@chakra-ui/react';
+import { FaBrain, FaSearch, FaTags, FaBookmark, FaRegLightbulb, FaRegClock, FaRegChartBar, FaRegComments, FaChrome, FaCog, FaFolderOpen, FaRocket } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, title, text }) => {
@@ -12,6 +12,8 @@ const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, t
       rounded="xl"
       shadow="md"
       height="100%"
+      transition="transform 0.2s"
+      _hover={{ transform: 'translateY(-5px)' }}
     >
       <Icon as={icon} w={10} h={10} color="blue.500" />
       <Heading size="md" mt={4} mb={2}>
@@ -24,16 +26,172 @@ const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, t
   );
 };
 
+const Step: React.FC<{ number: number; title: string; description: string; icon: any }> = ({ number, title, description, icon }) => {
+  const bgGradient = useColorModeValue(
+    'linear(to-br, blue.50, blue.100)',
+    'linear(to-br, blue.900, blue.800)'
+  );
+  const borderColor = useColorModeValue('blue.200', 'blue.600');
+  const iconBg = useColorModeValue('white', 'gray.800');
+
+  return (
+    <Box
+      p={8}
+      position="relative"
+      bgGradient={bgGradient}
+      rounded="2xl"
+      shadow="xl"
+      mb={8}
+      borderWidth="1px"
+      borderColor={borderColor}
+      transition="transform 0.3s"
+      _hover={{ transform: 'scale(1.02)' }}
+    >
+      <HStack spacing={6} position="relative">
+        <Box position="relative">
+          <Box
+            position="absolute"
+            top="-2px"
+            left="-2px"
+            right="-2px"
+            bottom="-2px"
+            bg="blue.500"
+            rounded="full"
+            opacity={0.3}
+          />
+          <Box
+            w="64px"
+            h="64px"
+            bg={iconBg}
+            rounded="full"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            position="relative"
+            shadow="lg"
+            borderWidth="2px"
+            borderColor={borderColor}
+          >
+            <Icon as={icon} w={6} h={6} color="blue.500" />
+          </Box>
+          <Box
+            position="absolute"
+            top="50%"
+            left="50%"
+            transform="translate(-50%, -50%)"
+            w="32px"
+            h="32px"
+            bg="blue.500"
+            color="white"
+            rounded="full"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            fontSize="sm"
+            fontWeight="bold"
+            shadow="lg"
+            border="2px solid white"
+          >
+            {number}
+          </Box>
+        </Box>
+        <VStack align="start" spacing={3} flex={1}>
+          <Heading size="md" color={useColorModeValue('gray.800', 'white')}>
+            {title}
+          </Heading>
+          <Text color={useColorModeValue('gray.600', 'gray.300')} fontSize="lg">
+            {description}
+          </Text>
+        </VStack>
+      </HStack>
+    </Box>
+  );
+};
+
+const Testimonial: React.FC<{ name: string; role: string; content: string }> = ({ name, role, content }) => {
+  const quoteBgColor = useColorModeValue('white', 'gray.700');
+  const quoteTextColor = useColorModeValue('gray.600', 'gray.300');
+  const quoteBorderColor = useColorModeValue('gray.200', 'gray.600');
+
+  return (
+    <Box
+      bg={quoteBgColor}
+      p={8}
+      rounded="xl"
+      shadow="lg"
+      borderWidth="1px"
+      borderColor={quoteBorderColor}
+      position="relative"
+      _before={{
+        content: '"❝"',
+        position: 'absolute',
+        top: '4',
+        left: '4',
+        fontSize: '24px',
+        color: 'blue.500',
+        opacity: 0.5,
+      }}
+    >
+      <Text
+        fontSize="md"
+        color={quoteTextColor}
+        mb={6}
+        pt={4}
+        fontStyle="italic"
+        position="relative"
+      >
+        {content}
+      </Text>
+      <HStack spacing={4} mt={4}>
+        <Avatar
+          size="md"
+          name={name}
+          bg="blue.500"
+          color="white"
+        />
+        <Box>
+          <Text fontWeight="bold" fontSize="md">
+            {name}
+          </Text>
+          <Text fontSize="sm" color={quoteTextColor}>
+            {role}
+          </Text>
+        </Box>
+      </HStack>
+    </Box>
+  );
+};
+
+const SectionWrapper: React.FC<{ children: React.ReactNode; alternate?: boolean }> = ({ children, alternate }) => {
+  const bgColor = useColorModeValue(
+    alternate ? 'gray.50' : 'white',
+    alternate ? 'gray.800' : 'gray.900'
+  );
+
+  return (
+    <Box py={20} bg={bgColor}>
+      <Container maxW="container.xl">
+        {children}
+      </Container>
+    </Box>
+  );
+};
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
   return (
-    <Box bg={bgColor} minH="100vh">
+    <Box>
       {/* Hero Section */}
-      <Container maxW="container.xl" pt={20} pb={20}>
+      <SectionWrapper>
         <VStack spacing={8} textAlign="center">
+          <Image
+            src="/logo-bookmarkai.svg"
+            alt="BookmarkAI Logo"
+            height="120px"
+            mb={4}
+          />
           <Heading
             fontSize={{ base: '3xl', md: '5xl' }}
             fontWeight="bold"
@@ -68,9 +226,11 @@ const LandingPage: React.FC = () => {
             </Button>
           </HStack>
         </VStack>
+      </SectionWrapper>
 
-        {/* Features Section */}
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10} mt={20}>
+      {/* Features Section */}
+      <SectionWrapper alternate>
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
           <Feature
             icon={FaBrain}
             title="AI-Powered Summaries"
@@ -92,7 +252,132 @@ const LandingPage: React.FC = () => {
             text="Enjoy a minimalist, distraction-free interface designed for productivity."
           />
         </SimpleGrid>
-      </Container>
+      </SectionWrapper>
+
+      {/* How It Works Section */}
+      <SectionWrapper>
+        <VStack spacing={16}>
+          <VStack spacing={4}>
+            <Heading 
+              textAlign="center" 
+              fontSize={{ base: "3xl", md: "4xl" }}
+              bgGradient="linear(to-r, blue.400, blue.600)"
+              bgClip="text"
+            >
+              How It Works
+            </Heading>
+            <Text
+              textAlign="center"
+              fontSize="xl"
+              color={useColorModeValue('gray.600', 'gray.300')}
+              maxW="2xl"
+            >
+              Get started in minutes with our simple four-step process
+            </Text>
+          </VStack>
+          
+          <Box w="100%" maxW="4xl" mx="auto">
+            <VStack spacing={6} align="stretch" position="relative">
+              <Step
+                number={1}
+                icon={FaChrome}
+                title="Save Your Bookmarks"
+                description="Simply add your bookmarks to BookmarkAI using our browser extension or paste the URL."
+              />
+              <Step
+                number={2}
+                icon={FaBrain}
+                title="AI Processing"
+                description="Our AI automatically analyzes the content, generates summaries, and creates relevant tags."
+              />
+              <Step
+                number={3}
+                icon={FaFolderOpen}
+                title="Smart Organization"
+                description="Your bookmarks are automatically organized into meaningful categories and folders."
+              />
+              <Step
+                number={4}
+                icon={FaRocket}
+                title="Easy Access"
+                description="Find and access your bookmarks instantly using our powerful search and filtering tools."
+              />
+            </VStack>
+          </Box>
+        </VStack>
+      </SectionWrapper>
+
+      {/* Benefits Section */}
+      <SectionWrapper alternate>
+        <VStack spacing={12}>
+          <Heading textAlign="center" mb={8}>Why Choose BookmarkAI</Heading>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
+            <Feature
+              icon={FaRegLightbulb}
+              title="Enhanced Productivity"
+              text="Save hours of manual organization with AI-powered automation and smart categorization."
+            />
+            <Feature
+              icon={FaRegClock}
+              title="Time-Saving Summaries"
+              text="Get the key points of any article or webpage instantly with AI-generated summaries."
+            />
+            <Feature
+              icon={FaRegChartBar}
+              title="Better Organization"
+              text="Keep your digital resources perfectly organized with intelligent categorization."
+            />
+            <Feature
+              icon={FaRegComments}
+              title="Smart Collaboration"
+              text="Share and collaborate on bookmark collections with team members effortlessly."
+            />
+          </SimpleGrid>
+        </VStack>
+      </SectionWrapper>
+
+      {/* Testimonials Section */}
+      <SectionWrapper>
+        <VStack spacing={12}>
+          <Heading textAlign="center" mb={8}>What Our Users Say</Heading>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
+            <Testimonial
+              name="Sarah Johnson"
+              role="Content Creator"
+              content="BookmarkAI has revolutionized how I organize my research. The AI summaries save me hours of reading time!"
+            />
+            <Testimonial
+              name="Michael Chen"
+              role="Software Developer"
+              content="The smart tagging feature is incredible. I can find any technical resource in seconds now."
+            />
+            <Testimonial
+              name="Emily Rodriguez"
+              role="Digital Marketer"
+              content="This tool has become essential for my workflow. The AI-powered organization is simply amazing."
+            />
+          </SimpleGrid>
+        </VStack>
+      </SectionWrapper>
+
+      {/* Final CTA Section */}
+      <SectionWrapper alternate>
+        <VStack spacing={8} textAlign="center">
+          <Heading>Ready to Transform Your Bookmarks?</Heading>
+          <Text fontSize="xl" maxW="2xl" mx="auto" color={textColor}>
+            Join thousands of users who have already revolutionized their bookmark management with AI.
+          </Text>
+          <Button
+            size="lg"
+            colorScheme="blue"
+            onClick={() => navigate('/signup')}
+            height="60px"
+            px={12}
+          >
+            Get Started Now
+          </Button>
+        </VStack>
+      </SectionWrapper>
     </Box>
   );
 };

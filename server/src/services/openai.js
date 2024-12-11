@@ -12,32 +12,129 @@ const createOpenAIClient = (apiKey) => {
 
 exports.analyzeContent = async (url, content, userApiKey) => {
     try {
+        console.log('Starting content analysis...');
         const openai = createOpenAIClient(userApiKey);
-        const summary = await this.generateSummary(content, openai);
-        const tags = await this.generateTags(content, openai);
-        return { summary, tags };
+        
+        // Run all analysis in parallel for better performance
+        const [summaryResult, tagsResult, categoryResult] = await Promise.all([
+            this.generateSummary(content, openai).catch(error => {
+                console.error('Summary generation failed:', error);
+                return 'Summary generation failed. Please try again later.';
+            }),
+            this.generateTags(content, url, openai).catch(error => {
+                console.error('Tag generation failed:', error);
+                return [];
+            }),
+            this.determineCategory(content, url, openai).catch(error => {
+                console.error('Category determination failed:', error);
+                return 'Article';
+            })
+        ]);
+
+        console.log('Analysis complete:', {
+            summaryLength: summaryResult.length,
+            tagsCount: tagsResult.length,
+            category: categoryResult,
+            tags: tagsResult
+        });
+
+        return {
+            summary: summaryResult,
+            tags: tagsResult,
+            category: categoryResult
+        };
     } catch (error) {
-        console.error('Error analyzing content:', error);
+        console.error('Error in analyzeContent:', error);
         // Return default values instead of throwing
         return {
             summary: 'Summary generation failed. Please try again later.',
-            tags: []
+            tags: [],
+            category: 'Article' // Default to Article if analysis fails
         };
     }
 };
 
-exports.generateTags = async (content, openaiClient) => {
+exports.determineCategory = async (content, url, openaiClient) => {
     try {
+        console.log('Determining category for URL:', url);
+        
+        // Quick URL-based category detection
+        const urlLower = url.toLowerCase();
+        if (urlLower.includes('youtube.com') || 
+            urlLower.includes('vimeo.com') || 
+            urlLower.includes('dailymotion.com') ||
+            urlLower.includes('video')) {
+            console.log('Category determined from URL: Video');
+            return 'Video';
+        }
+        
+        if (urlLower.includes('arxiv.org') || 
+            urlLower.includes('research') || 
+            urlLower.includes('paper') ||
+            urlLower.includes('doi.org')) {
+            console.log('Category determined from URL: Research');
+            return 'Research';
+        }
+
+        // If no quick match, use AI to determine category
         const response = await openaiClient.createChatCompletion({
             model: "gpt-4",
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful assistant that generates relevant tags for web content. Generate 3-5 specific, descriptive tags that best categorize the content. Never use generic tags like 'other', 'miscellaneous', or 'general'. Return only the tags as a JSON array of strings, all in lowercase. Example: ['technology', 'artificial-intelligence', 'machine-learning']"
+                    content: "You are a content classifier that categorizes web content into one of three categories: 'Article', 'Video', or 'Research'. Return ONLY the category name as a single word, no explanation or additional text. Use these guidelines:\n- 'Video': For video content, video sharing sites, or video-focused pages\n- 'Research': For academic papers, scientific articles, research publications, or technical documentation\n- 'Article': For general articles, blog posts, news, and other text-based content"
                 },
                 {
                     role: "user",
-                    content: content
+                    content: `URL: ${url}\n\nContent: ${content.substring(0, 1000)}` // Only send first 1000 chars to avoid token limits
+                }
+            ],
+            temperature: 0.1,
+            max_tokens: 10
+        });
+
+        const category = response.data.choices[0].message.content.trim();
+        console.log('AI determined category:', category);
+        
+        // Ensure the category is one of our valid options
+        if (['Article', 'Video', 'Research'].includes(category)) {
+            return category;
+        }
+        
+        console.log('Invalid category returned, defaulting to Article');
+        return 'Article';
+    } catch (error) {
+        console.error('Error determining category:', error);
+        return 'Article'; // Default to Article if there's an error
+    }
+};
+
+exports.generateTags = async (content, url, openaiClient) => {
+    try {
+        console.log('Generating tags for URL:', url);
+        const response = await openaiClient.createChatCompletion({
+            model: "gpt-4",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a tag generator for web content. Your task is to generate 3-5 specific, descriptive tags that best categorize the content.
+
+Rules:
+1. Return ONLY a JSON array of lowercase strings, no other text
+2. Each tag should be 1-3 words maximum
+3. Never use generic terms like 'other', 'miscellaneous', 'general'
+4. Focus on the main topics and themes
+5. Include technology names, concepts, or proper nouns when relevant
+6. Make tags specific and meaningful
+
+Example good response: ["artificial intelligence", "machine learning", "neural networks"]
+Example bad response: ["technology", "article", "general", "other"]
+
+The response must be valid JSON and contain only the array of tags.`
+                },
+                {
+                    role: "user",
+                    content: `URL: ${url}\n\nContent: ${content.substring(0, 1000)}` // Only send first 1000 chars to avoid token limits
                 }
             ],
             temperature: 0.3,
@@ -46,18 +143,21 @@ exports.generateTags = async (content, openaiClient) => {
 
         let tags = [];
         try {
-            tags = JSON.parse(response.data.choices[0].message.content);
+            const tagContent = response.data.choices[0].message.content;
+            console.log('Raw tag response:', tagContent);
+            tags = JSON.parse(tagContent);
             // Filter and clean tags
             tags = tags
                 .map(tag => tag.toLowerCase().trim())
                 .filter(tag => {
                     // Remove empty tags, 'other', and generic terms
-                    const genericTerms = ['other', 'miscellaneous', 'general', 'misc', 'various'];
+                    const genericTerms = ['other', 'miscellaneous', 'general', 'misc', 'various', 'article', 'content'];
                     return tag && 
                            tag.length > 0 && 
                            !genericTerms.includes(tag.toLowerCase()) &&
                            tag.length <= 50; // Reasonable length limit
                 });
+            console.log('Generated tags:', tags);
         } catch (parseError) {
             console.error('Error parsing tags:', parseError);
             return [];
@@ -72,6 +172,7 @@ exports.generateTags = async (content, openaiClient) => {
 
 exports.generateSummary = async (content, openaiClient) => {
     try {
+        console.log('Generating summary...');
         const response = await openaiClient.createChatCompletion({
             model: "gpt-4",
             messages: [
@@ -81,7 +182,7 @@ exports.generateSummary = async (content, openaiClient) => {
                 },
                 {
                     role: "user",
-                    content: content
+                    content: content.substring(0, 1000) // Only send first 1000 chars to avoid token limits
                 }
             ],
             temperature: 0.3,
@@ -89,6 +190,7 @@ exports.generateSummary = async (content, openaiClient) => {
         });
 
         const summary = response.data.choices[0].message.content.trim();
+        console.log('Generated summary length:', summary.length);
         return summary || 'No summary available.';
     } catch (error) {
         console.error('Error generating summary:', error);

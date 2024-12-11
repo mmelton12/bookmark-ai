@@ -11,6 +11,9 @@ import {
   TagLabel,
   TagCloseButton,
   useToast,
+  Tabs,
+  TabList,
+  Tab,
 } from '@chakra-ui/react';
 import { bookmarkAPI } from '../../services/api';
 import BookmarkList from '../bookmarks/BookmarkList';
@@ -20,6 +23,7 @@ const SearchPage: React.FC = () => {
   const toast = useToast();
   const { searchQuery, setSearchQuery } = useSearch();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<'Article' | 'Video' | 'Research' | null>(null);
   const [availableTags, setAvailableTags] = useState<Array<{ name: string; count: number }>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -106,6 +110,26 @@ const SearchPage: React.FC = () => {
     }
   };
 
+  const handleCategoryBookmarks = async (bookmarkIds: string[]) => {
+    try {
+      await bookmarkAPI.bulkUpdate(bookmarkIds, { action: 'category' });
+      toast({
+        title: 'Bookmark categories updated successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error updating bookmark categories:', error);
+      toast({
+        title: 'Error updating bookmark categories',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
   return (
     <Container maxW="container.xl" py={8}>
       <VStack spacing={6} align="stretch">
@@ -118,6 +142,18 @@ const SearchPage: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               size="lg"
             />
+            <Tabs variant="soft-rounded" colorScheme="blue" mb={4} onChange={(index) => {
+              setSelectedCategory(index === 0 ? null : 
+                               index === 1 ? 'Article' :
+                               index === 2 ? 'Video' : 'Research');
+            }}>
+              <TabList>
+                <Tab>All</Tab>
+                <Tab>Articles</Tab>
+                <Tab>Videos</Tab>
+                <Tab>Research</Tab>
+              </TabList>
+            </Tabs>
             <Box w="100%">
               <Text mb={2}>Available Tags:</Text>
               <Box display="flex" flexWrap="wrap" gap={2}>
@@ -167,8 +203,10 @@ const SearchPage: React.FC = () => {
         <BookmarkList
           onMove={handleMoveBookmarks}
           onTag={handleTagBookmarks}
+          onCategory={handleCategoryBookmarks}
           searchQuery={searchQuery}
           selectedTag={selectedTags.length === 1 ? selectedTags[0] : null}
+          selectedCategory={selectedCategory}
           onTagClick={handleTagClick}
         />
       </VStack>
