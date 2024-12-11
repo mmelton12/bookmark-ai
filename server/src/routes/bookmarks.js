@@ -5,6 +5,7 @@ const Bookmark = require('../models/Bookmark');
 const User = require('../models/User');
 const { analyzeContent } = require('../services/openai');
 const { fetchContent } = require('../utils/contentFetcher');
+const { processTags } = require('../utils/tagNormalizer');
 const router = express.Router();
 
 // @route   POST /api/bookmarks
@@ -82,15 +83,25 @@ router.post('/', [
             });
         }
 
+        // Get all existing tags for the user
+        const existingBookmarks = await Bookmark.find({ user: req.user.id });
+        const existingTags = Array.from(new Set(
+            existingBookmarks.flatMap(bookmark => bookmark.tags || [])
+        ));
+
+        // Process and normalize tags
+        const normalizedTags = processTags(analysisResult.tags, existingTags);
+        console.log('Normalized tags:', normalizedTags);
+
         // Create bookmark
-        console.log('Creating bookmark in database with tags:', analysisResult.tags);
+        console.log('Creating bookmark in database with normalized tags:', normalizedTags);
         try {
             const bookmark = await Bookmark.create({
                 url,
                 title: fetchedContent.title,
                 description: fetchedContent.description,
                 aiSummary: analysisResult.summary,
-                tags: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
+                tags: normalizedTags,
                 category: analysisResult.category,
                 user: req.user.id
             });
@@ -121,6 +132,12 @@ router.post('/bulk', protect, async (req, res) => {
     try {
         const { action, bookmarkIds, data } = req.body;
 
+        // Get all existing tags for the user before bulk operations
+        const existingBookmarks = await Bookmark.find({ user: req.user.id });
+        const existingTags = Array.from(new Set(
+            existingBookmarks.flatMap(bookmark => bookmark.tags || [])
+        ));
+
         switch (action) {
             case 'move':
                 await Bookmark.updateMany(
@@ -130,9 +147,11 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'tag':
+                // Normalize new tags before adding
+                const normalizedNewTags = processTags(data.tags, existingTags);
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
-                    { $addToSet: { tags: { $each: data.tags } } }
+                    { $addToSet: { tags: { $each: normalizedNewTags } } }
                 );
                 break;
 
@@ -172,6 +191,42 @@ router.post('/bulk', protect, async (req, res) => {
     } catch (error) {
         console.error('Bulk operation failed:', error);
         res.status(500).json({ message: 'Failed to perform bulk operation' });
+    }
+});
+
+// Update bookmark route
+router.put('/:id', protect, async (req, res) => {
+    try {
+        const bookmark = await Bookmark.findOne({
+            _id: req.params.id,
+            user: req.user.id
+        });
+
+        if (!bookmark) {
+            return res.status(404).json({ message: 'Bookmark not found' });
+        }
+
+        const { folder, tags, isFavorite, category } = req.body;
+
+        if (folder !== undefined) bookmark.folder = folder;
+        if (tags !== undefined) {
+            // Get all existing tags for the user
+            const existingBookmarks = await Bookmark.find({ user: req.user.id });
+            const existingTags = Array.from(new Set(
+                existingBookmarks.flatMap(b => b.tags || [])
+            ));
+            // Process and normalize new tags
+            bookmark.tags = processTags(tags, existingTags);
+        }
+        if (isFavorite !== undefined) bookmark.isFavorite = isFavorite;
+        if (category !== undefined) bookmark.category = category;
+
+        await bookmark.save();
+
+        res.json(bookmark);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -319,34 +374,6 @@ router.get('/search', protect, async (req, res) => {
             limit,
             hasMore: total > skip + bookmarks.length
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Update bookmark route
-router.put('/:id', protect, async (req, res) => {
-    try {
-        const bookmark = await Bookmark.findOne({
-            _id: req.params.id,
-            user: req.user.id
-        });
-
-        if (!bookmark) {
-            return res.status(404).json({ message: 'Bookmark not found' });
-        }
-
-        const { folder, tags, isFavorite, category } = req.body;
-
-        if (folder !== undefined) bookmark.folder = folder;
-        if (tags !== undefined) bookmark.tags = tags;
-        if (isFavorite !== undefined) bookmark.isFavorite = isFavorite;
-        if (category !== undefined) bookmark.category = category;
-
-        await bookmark.save();
-
-        res.json(bookmark);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

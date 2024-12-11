@@ -1,9 +1,45 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
+const isYouTubeUrl = (url) => {
+    return url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+};
+
+const getYouTubeVideoId = (url) => {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+};
+
+const fetchYouTubeContent = async (url) => {
+    const videoId = getYouTubeVideoId(url);
+    if (!videoId) {
+        throw new Error('Invalid YouTube URL');
+    }
+
+    try {
+        // Use YouTube's oEmbed endpoint to get video information
+        const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+        const response = await axios.get(oEmbedUrl);
+        const { title, author_name } = response.data;
+
+        return {
+            title: title,
+            content: `YouTube video by ${author_name}. Video ID: ${videoId}`,
+            description: `YouTube video: ${title} by ${author_name}`
+        };
+    } catch (error) {
+        throw new Error('Failed to fetch YouTube video information');
+    }
+};
+
 const fetchContent = async (url) => {
     try {
         console.log('Fetching content from URL:', url);
+
+        // Check if it's a YouTube URL
+        if (isYouTubeUrl(url)) {
+            return await fetchYouTubeContent(url);
+        }
         
         // Configure axios with headers to mimic a browser
         const response = await axios.get(url, {
