@@ -41,7 +41,6 @@ import {
 import { useFolder } from '../../contexts/FolderContext';
 import FolderManager from '../folders/FolderManager';
 import BookmarkList from './BookmarkList';
-import BookmarkImport from './BookmarkImport';
 import { bookmarkAPI } from '../../services/api';
 import { useSearch } from '../../contexts/SearchContext';
 
@@ -393,7 +392,6 @@ const BookmarkManager: React.FC = () => {
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'Article' | 'Video' | 'Research' | null>(null);
   const { searchQuery } = useSearch();
@@ -450,13 +448,6 @@ const BookmarkManager: React.FC = () => {
     >
       <GridItem display={{ base: 'none', md: 'block' }}>
         <VStack spacing={4} align="stretch">
-          <Button
-            colorScheme="blue"
-            onClick={() => setIsImportDialogOpen(true)}
-            mb={4}
-          >
-            Import Bookmarks
-          </Button>
           <FolderManager />
         </VStack>
       </GridItem>
@@ -518,12 +509,6 @@ const BookmarkManager: React.FC = () => {
         isOpen={isCategoryDialogOpen}
         onClose={() => setIsCategoryDialogOpen(false)}
         bookmarkIds={selectedBookmarkIds}
-        onComplete={handleOperationComplete}
-      />
-
-      <BookmarkImport
-        isOpen={isImportDialogOpen}
-        onClose={() => setIsImportDialogOpen(false)}
         onComplete={handleOperationComplete}
       />
 

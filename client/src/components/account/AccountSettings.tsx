@@ -33,6 +33,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { bookmarkAPI } from '../../services/api';
+import BookmarkImport from '../bookmarks/BookmarkImport';
 
 const ChangePasswordModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   isOpen,
@@ -130,34 +131,35 @@ const AccountSettings: React.FC = () => {
   const [openAiKey, setOpenAiKey] = useState(user?.openAiKey || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isPasswordModalOpen, onOpen: onPasswordModalOpen, onClose: onPasswordModalClose } = useDisclosure();
+  const { isOpen: isImportModalOpen, onOpen: onImportModalOpen, onClose: onImportModalClose } = useDisclosure();
   const [stats, setStats] = useState({ totalBookmarks: 0, tagsCount: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const statsData = await bookmarkAPI.getStats();
-        setStats(statsData);
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load account statistics',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoadingStats(false);
-      }
-    };
+  const fetchStats = async () => {
+    try {
+      const statsData = await bookmarkAPI.getStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load account statistics',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStats();
-  }, [toast]);
+  }, []);
 
   const handleUpdateProfile = async () => {
     setIsLoading(true);
@@ -182,6 +184,12 @@ const AccountSettings: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleImportComplete = () => {
+    // Refresh stats after import
+    setIsLoadingStats(true);
+    fetchStats();
   };
 
   return (
@@ -308,12 +316,25 @@ const AccountSettings: React.FC = () => {
         </CardBody>
       </Card>
 
+      {/* Data Management Section */}
+      <Card bg={bgColor} borderWidth="1px" borderColor={borderColor}>
+        <CardBody>
+          <VStack spacing={6} align="start">
+            <Heading size="md">Data Management</Heading>
+            <Text>Import bookmarks from your browser or export your existing bookmarks.</Text>
+            <Button colorScheme="blue" onClick={onImportModalOpen}>
+              Import Bookmarks
+            </Button>
+          </VStack>
+        </CardBody>
+      </Card>
+
       {/* Account Security */}
       <Card bg={bgColor} borderWidth="1px" borderColor={borderColor}>
         <CardBody>
           <VStack spacing={6} align="start">
             <Heading size="md">Security</Heading>
-            <Button colorScheme="blue" variant="outline" onClick={onOpen}>
+            <Button colorScheme="blue" variant="outline" onClick={onPasswordModalOpen}>
               Change Password
             </Button>
             <Button colorScheme="red" variant="ghost">
@@ -323,7 +344,12 @@ const AccountSettings: React.FC = () => {
         </CardBody>
       </Card>
 
-      <ChangePasswordModal isOpen={isOpen} onClose={onClose} />
+      <ChangePasswordModal isOpen={isPasswordModalOpen} onClose={onPasswordModalClose} />
+      <BookmarkImport 
+        isOpen={isImportModalOpen} 
+        onClose={onImportModalClose}
+        onComplete={handleImportComplete}
+      />
     </VStack>
   );
 };
