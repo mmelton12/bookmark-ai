@@ -156,13 +156,18 @@ router.post('/login', [
 });
 
 // @route   POST /api/auth/logout
-// @desc    Logout user and clear session
+// @desc    Logout user / Clear credentials
 // @access  Public
 router.post('/logout', (req, res) => {
+    // Clear any session data if it exists
     if (req.session) {
         req.session.destroy();
     }
+    
+    // Clear passport session
     req.logout(() => {
+        // Send back Clear-Site-Data header to clear all client-side storage
+        res.set('Clear-Site-Data', '"cookies", "storage"');
         res.status(200).json({ message: 'Logged out successfully' });
     });
 });

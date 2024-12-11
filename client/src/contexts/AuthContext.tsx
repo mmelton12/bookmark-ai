@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { User, AuthResponse, UserUpdateInput } from '../types';
+import axios from 'axios';
 
 interface AuthContextType {
   user: User | null;
@@ -34,18 +35,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = useCallback(() => {
+  const clearAuthState = useCallback(() => {
+    // Clear all auth-related localStorage items
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Reset auth state
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/');
-  }, [navigate]);
+    
+    // Reset axios default authorization header
+    delete axios.defaults.headers.common['Authorization'];
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      // Attempt to logout on server
+      await authAPI.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state, even if server logout fails
+      clearAuthState();
+      navigate('/login');
+    }
+  }, [navigate, clearAuthState]);
 
   // Handle initial auth state and social auth callback
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const token = localStorage.getItem('token');
+
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
       
@@ -68,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           })
           .catch((error) => {
             console.error('Auth callback error:', error);
+            clearAuthState();
             navigate('/login');
           })
           .finally(() => {
@@ -77,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setIsLoading(false);
     }
-  }, [location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate, clearAuthState]);
 
   // Check auth status when token changes
   useEffect(() => {
@@ -89,8 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (PROTECTED_ROUTES.some(route => location.pathname.startsWith(route))) {
             navigate('/login', { state: { from: location } });
           }
-          setUser(null);
-          setIsAuthenticated(false);
+          clearAuthState();
           return;
         }
 
@@ -103,8 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (PROTECTED_ROUTES.some(route => location.pathname.startsWith(route))) {
           navigate('/login', { state: { from: location } });
         }
-        setUser(null);
-        setIsAuthenticated(false);
+        clearAuthState();
       } finally {
         setIsLoading(false);
       }
@@ -113,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!location.pathname.startsWith('/auth/callback')) {
       checkAuthStatus();
     }
-  }, [location.pathname, location, navigate]);
+  }, [location.pathname, location, navigate, clearAuthState]);
 
   const handleAuthResponse = useCallback((response: AuthResponse) => {
     const { token, user } = response;
@@ -121,6 +141,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user', JSON.stringify(user));
     setUser(user);
     setIsAuthenticated(true);
+    // Set axios authorization header
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     navigate('/dashboard');
   }, [navigate]);
 
@@ -139,14 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleAuthResponse(response);
     } catch (error) {
       throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      handleLogout();
     }
   };
 
@@ -180,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         signup,
-        logout,
+        logout: handleLogout,
         updateProfile,
         updatePassword,
       }}
