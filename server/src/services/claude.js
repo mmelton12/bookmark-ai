@@ -16,7 +16,7 @@ exports.analyzeContent = async (url, content, userApiKey) => {
         
         // Run all analysis in parallel for better performance
         const [summaryResult, tagsResult, categoryResult] = await Promise.all([
-            this.generateSummary(content, claude).catch(error => {
+            this.generateSummary(content, url, claude).catch(error => {
                 console.error('Summary generation failed:', error);
                 return 'Summary generation failed. Please try again later.';
             }),
@@ -59,9 +59,9 @@ exports.determineCategory = async (content, url, claudeClient) => {
         // Quick URL-based category detection
         const urlLower = url.toLowerCase();
         if (urlLower.includes('youtube.com') || 
+            urlLower.includes('youtu.be') || 
             urlLower.includes('vimeo.com') || 
-            urlLower.includes('dailymotion.com') ||
-            urlLower.includes('video')) {
+            urlLower.includes('dailymotion.com')) {
             console.log('Category determined from URL: Video');
             return 'Video';
         }
@@ -79,10 +79,10 @@ exports.determineCategory = async (content, url, claudeClient) => {
             model: "claude-3-opus-20240229",
             max_tokens: 10,
             temperature: 0.1,
-            system: "You are a content classifier that categorizes web content into one of three categories: 'Article', 'Video', or 'Research'. Return ONLY the category name as a single word, no explanation or additional text. Use these guidelines:\n- 'Video': For video content, video sharing sites, or video-focused pages\n- 'Research': For academic papers, scientific articles, research publications, or technical documentation\n- 'Article': For general articles, blog posts, news, and other text-based content",
+            system: "You are a content classifier that categorizes web content into one of three categories: 'Article', 'Video', or 'Research'. Return ONLY the category name as a single word, no explanation or additional text.",
             messages: [{
                 role: "user",
-                content: `URL: ${url}\n\nContent: ${content.substring(0, 1000)}` // Only send first 1000 chars to avoid token limits
+                content: `URL: ${url}\n\nContent: ${content.substring(0, 2000)}` // Increased context
             }]
         });
 
@@ -105,27 +105,34 @@ exports.determineCategory = async (content, url, claudeClient) => {
 exports.generateTags = async (content, url, claudeClient) => {
     try {
         console.log('Generating tags for URL:', url);
+        
+        // Determine if this is YouTube content
+        const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be');
+        
+        const systemPrompt = isYouTube 
+            ? `You are analyzing a YouTube video. Generate 3-5 accurate tags that represent the main topics, people, and organizations discussed in the video. Rules:
+               1. Return ONLY a JSON array of lowercase strings, no other text
+               2. Focus on the actual video content and discussion topics
+               3. Include relevant people, companies, or organizations mentioned
+               4. Keep tags simple and focused (1-2 words, rarely 3 if needed)
+               5. Avoid generic terms like 'youtube', 'video', 'interview'
+               Example good response: ["artificial intelligence", "microsoft", "sam altman"]`
+            : `You are a tag generator for web content. Generate 3-5 simple, focused tags that best categorize the content.
+               Rules:
+               1. Return ONLY a JSON array of lowercase strings, no other text
+               2. Keep tags simple and focused (1-2 words, rarely 3 if needed)
+               3. Focus on main topics, people, or organizations
+               4. Avoid generic terms like 'article', 'other', 'miscellaneous'
+               Example good response: ["climate change", "united nations", "paris agreement"]`;
+
         const response = await claudeClient.messages.create({
             model: "claude-3-opus-20240229",
             max_tokens: 100,
             temperature: 0.3,
-            system: `You are a tag generator for web content. Your task is to generate 3-5 specific, descriptive tags that best categorize the content.
-
-Rules:
-1. Return ONLY a JSON array of lowercase strings, no other text
-2. Each tag should be 1-3 words maximum
-3. Never use generic terms like 'other', 'miscellaneous', 'general'
-4. Focus on the main topics and themes
-5. Include technology names, concepts, or proper nouns when relevant
-6. Make tags specific and meaningful
-
-Example good response: ["artificial intelligence", "machine learning", "neural networks"]
-Example bad response: ["technology", "article", "general", "other"]
-
-The response must be valid JSON and contain only the array of tags.`,
+            system: systemPrompt,
             messages: [{
                 role: "user",
-                content: `URL: ${url}\n\nContent: ${content.substring(0, 1000)}` // Only send first 1000 chars to avoid token limits
+                content: `URL: ${url}\n\nContent: ${content}` // Use full content for better context
             }]
         });
 
@@ -138,12 +145,12 @@ The response must be valid JSON and contain only the array of tags.`,
             tags = tags
                 .map(tag => tag.toLowerCase().trim())
                 .filter(tag => {
-                    // Remove empty tags, 'other', and generic terms
-                    const genericTerms = ['other', 'miscellaneous', 'general', 'misc', 'various', 'article', 'content'];
+                    // Remove empty tags and generic terms
+                    const genericTerms = ['other', 'miscellaneous', 'general', 'misc', 'various', 'article', 'content', 'video', 'youtube'];
                     return tag && 
                            tag.length > 0 && 
                            !genericTerms.includes(tag.toLowerCase()) &&
-                           tag.length <= 50; // Reasonable length limit
+                           tag.length <= 50;
                 });
             console.log('Generated tags:', tags);
         } catch (parseError) {
@@ -158,17 +165,25 @@ The response must be valid JSON and contain only the array of tags.`,
     }
 };
 
-exports.generateSummary = async (content, claudeClient) => {
+exports.generateSummary = async (content, url, claudeClient) => {
     try {
         console.log('Generating summary...');
+        
+        // Determine if this is YouTube content
+        const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be');
+        
+        const systemPrompt = isYouTube
+            ? "You are analyzing a YouTube video. Generate a concise 2-3 sentence summary that accurately captures the main points discussed in the video. Focus on the key topics, insights, and any significant conclusions or takeaways. Be specific and avoid generic descriptions."
+            : "You are a helpful assistant that generates concise summaries of web content. Generate a brief, informative summary in 2-3 sentences that captures the main points and key takeaways.";
+
         const response = await claudeClient.messages.create({
             model: "claude-3-opus-20240229",
             max_tokens: 150,
             temperature: 0.3,
-            system: "You are a helpful assistant that generates concise summaries of web content. Generate a brief, informative summary in 2-3 sentences.",
+            system: systemPrompt,
             messages: [{
                 role: "user",
-                content: content.substring(0, 1000) // Only send first 1000 chars to avoid token limits
+                content: content // Use full content for better context
             }]
         });
 

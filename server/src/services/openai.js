@@ -117,18 +117,21 @@ exports.generateTags = async (content, url, openaiClient) => {
             messages: [
                 {
                     role: "system",
-                    content: `You are a tag generator for web content. Your task is to generate 3-5 specific, descriptive tags that best categorize the content.
+                    content: `You are a tag generator for web content. Your task is to generate 3-5 simple, focused tags that best categorize the content.
 
 Rules:
 1. Return ONLY a JSON array of lowercase strings, no other text
-2. Each tag should be 1-3 words maximum
-3. Never use generic terms like 'other', 'miscellaneous', 'general'
-4. Focus on the main topics and themes
-5. Include technology names, concepts, or proper nouns when relevant
-6. Make tags specific and meaningful
+2. Keep tags as simple as possible:
+   - For names, use only the person's name (e.g., "elon musk" not "elon musk twitter")
+   - For concepts, use the core term (e.g., "immigration" not "immigration policy")
+   - For companies, use the company name (e.g., "apple" not "apple earnings")
+3. Each tag should be 1-2 words maximum, rarely 3 if absolutely necessary
+4. Never use generic terms like 'other', 'miscellaneous', 'general'
+5. Focus on the main topics, people, or organizations mentioned
+6. Avoid combining multiple concepts into one tag
 
-Example good response: ["artificial intelligence", "machine learning", "neural networks"]
-Example bad response: ["technology", "article", "general", "other"]
+Example good response: ["artificial intelligence", "microsoft", "sam altman"]
+Example bad response: ["sam altman openai departure", "technology news", "ai ethics debate"]
 
 The response must be valid JSON and contain only the array of tags.`
                 },

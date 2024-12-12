@@ -1,6 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { cleanUrl } = require('./urlCleaner');
+const { YoutubeTranscript } = require('youtube-transcript');
 
 const isYouTubeUrl = (url) => {
     try {
@@ -33,6 +34,18 @@ const getYouTubeVideoId = (url) => {
     }
 };
 
+const fetchYouTubeTranscript = async (videoId) => {
+    try {
+        const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId);
+        return transcriptItems
+            .map(item => item.text)
+            .join(' ');
+    } catch (error) {
+        console.log('Transcript fetch failed:', error);
+        return null;
+    }
+};
+
 const fetchYouTubeContent = async (url) => {
     // Clean the URL first to ensure consistent format
     const cleanedUrl = cleanUrl(url);
@@ -48,10 +61,20 @@ const fetchYouTubeContent = async (url) => {
         const response = await axios.get(oEmbedUrl);
         const { title, author_name } = response.data;
 
+        // Try to fetch transcript
+        const transcript = await fetchYouTubeTranscript(videoId);
+        
+        // Construct rich content combining metadata and transcript
+        const content = transcript 
+            ? `Title: ${title}\nAuthor: ${author_name}\n\nTranscript:\n${transcript}`
+            : `YouTube video by ${author_name}. Video ID: ${videoId}`;
+
         return {
             title: title,
-            content: `YouTube video by ${author_name}. Video ID: ${videoId}`,
-            description: `YouTube video: ${title} by ${author_name}`
+            content: content,
+            description: `YouTube video: ${title} by ${author_name}`,
+            isYouTube: true,
+            hasTranscript: !!transcript
         };
     } catch (error) {
         throw new Error('Failed to fetch YouTube video information');
@@ -157,17 +180,11 @@ const fetchContent = async (url) => {
             url: cleanedUrl
         });
 
-        // Limit content length but ensure we don't cut in the middle of a word
-        const maxLength = 5000;
-        let truncatedContent = content.substring(0, maxLength);
-        if (content.length > maxLength) {
-            truncatedContent = truncatedContent.substring(0, truncatedContent.lastIndexOf(' '));
-        }
-
         return {
             title: title.trim(),
-            content: truncatedContent,
-            description: description.trim()
+            content: content,
+            description: description.trim(),
+            isYouTube: false
         };
     } catch (error) {
         console.error('Error fetching content:', {
