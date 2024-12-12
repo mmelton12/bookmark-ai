@@ -14,15 +14,17 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { DeleteIcon, ExternalLinkIcon } from '@chakra-ui/icons';
+import { FaStar } from 'react-icons/fa';
 import { Bookmark } from '../../types';
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
   onDelete: (id: string) => Promise<void>;
   onTagClick: (tag: string) => void;
+  onToggleFavorite: (id: string, isFavorite: boolean) => Promise<void>;
 }
 
-const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagClick }) => {
+const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagClick, onToggleFavorite }) => {
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -31,6 +33,7 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagCl
   const linkColor = useColorModeValue('blue.600', 'blue.300');
   const dateColor = useColorModeValue('gray.500', 'gray.400');
   const tagHoverBg = useColorModeValue('blue.100', 'blue.700');
+  const starColor = bookmark.isFavorite ? 'yellow.400' : 'gray.300';
 
   const handleDelete = async () => {
     try {
@@ -39,6 +42,20 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagCl
       toast({
         title: 'Error deleting bookmark',
         description: error instanceof Error ? error.message : 'Failed to delete bookmark',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      await onToggleFavorite(bookmark._id, !bookmark.isFavorite);
+    } catch (error) {
+      toast({
+        title: 'Error updating favorite status',
+        description: error instanceof Error ? error.message : 'Failed to update favorite status',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -66,14 +83,25 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagCl
           <Heading size="md" noOfLines={2}>
             {bookmark.title || bookmark.url}
           </Heading>
-          <IconButton
-            aria-label="Delete bookmark"
-            icon={<DeleteIcon />}
-            size="sm"
-            colorScheme="red"
-            variant="ghost"
-            onClick={handleDelete}
-          />
+          <HStack>
+            <IconButton
+              aria-label={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
+              icon={<FaStar />}
+              size="sm"
+              colorScheme={bookmark.isFavorite ? "yellow" : "gray"}
+              variant="ghost"
+              onClick={handleToggleFavorite}
+              color={starColor}
+            />
+            <IconButton
+              aria-label="Delete bookmark"
+              icon={<DeleteIcon />}
+              size="sm"
+              colorScheme="red"
+              variant="ghost"
+              onClick={handleDelete}
+            />
+          </HStack>
         </HStack>
 
         <Link

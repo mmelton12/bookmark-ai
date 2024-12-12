@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   VStack,
@@ -26,7 +26,7 @@ import {
 } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
-import { Bookmark } from '../../types';
+import { Bookmark, PaginatedResponse } from '../../types';
 
 interface BookmarkListProps {
   onMove: (bookmarkIds: string[]) => void;
@@ -47,7 +47,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   selectedCategory = undefined,
   onTagClick
 }) => {
-  const { selectedFolder, refreshFolders } = useFolder();
+  const { selectedFolder, refreshFolders, refreshTotalBookmarks } = useFolder();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,29 +55,26 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadingRef = useRef<HTMLDivElement | null>(null);
 
+  // Color mode values
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   const fetchBookmarks = useCallback(async (pageNum: number) => {
     try {
       setLoadingMore(pageNum > 1);
-      let response;
+      let response: PaginatedResponse<Bookmark>;
       
-      if (searchQuery || selectedTag || selectedCategory) {
-        // Use search endpoint when there's a search query, selected tag, or category
-        response = await bookmarkAPI.search({
-          query: searchQuery,
-          tags: selectedTag ? [selectedTag] : [],
-          folderId: selectedFolder,
-          category: selectedCategory
-        }, pageNum);
-      } else {
-        // Use regular getBookmarks endpoint when no search/filter is active
-        response = await bookmarkAPI.getBookmarks(selectedFolder, pageNum);
-      }
+      const searchParams = {
+        query: searchQuery,
+        tags: selectedTag ? [selectedTag] : [],
+        category: selectedCategory,
+        favorite: selectedFolder === 'favorites' ? true : undefined,
+        folderId: selectedFolder !== 'favorites' ? selectedFolder : undefined
+      };
+
+      // Always use search endpoint to handle all filters including favorites
+      response = await bookmarkAPI.search(searchParams, pageNum);
       
       if (pageNum === 1) {
         setBookmarks(response.data);
@@ -95,41 +92,9 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     }
   }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
 
-  // Set up intersection observer
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          setPage(prev => prev + 1);
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observerRef.current = observer;
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, loadingMore]);
-
-  // Observe loading div
-  useEffect(() => {
-    if (loadingRef.current && observerRef.current) {
-      observerRef.current.observe(loadingRef.current);
-    }
-    return () => {
-      if (loadingRef.current && observerRef.current) {
-        observerRef.current.unobserve(loadingRef.current);
-      }
-    };
-  }, [loadingRef.current]);
-
-  // Fetch bookmarks when page changes
-  useEffect(() => {
-    fetchBookmarks(page);
-  }, [fetchBookmarks, page]);
+    fetchBookmarks(1);
+  }, [fetchBookmarks]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -154,7 +119,8 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         await Promise.all(selectedBookmarks.map(id => bookmarkAPI.delete(id)));
         setPage(1);
         await fetchBookmarks(1);
-        await refreshFolders(); // Refresh folder counts after deletion
+        await refreshFolders();
+        await refreshTotalBookmarks();
         setSelectedBookmarks([]);
       } catch (error) {
         console.error('Failed to delete bookmarks:', error);
@@ -171,9 +137,24 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         });
         setPage(1);
         await fetchBookmarks(1);
+        await refreshTotalBookmarks();
       }
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  const handleDelete = async (bookmarkId: string) => {
+    if (window.confirm('Are you sure you want to delete this bookmark?')) {
+      try {
+        await bookmarkAPI.delete(bookmarkId);
+        setPage(1);
+        await fetchBookmarks(1);
+        await refreshFolders();
+        await refreshTotalBookmarks();
+      } catch (error) {
+        console.error('Failed to delete bookmark:', error);
+      }
     }
   };
 
@@ -318,18 +299,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                         </MenuItem>
                         <MenuItem
                           icon={<FaTrash />}
-                          onClick={async () => {
-                            if (window.confirm('Are you sure you want to delete this bookmark?')) {
-                              try {
-                                await bookmarkAPI.delete(bookmark._id);
-                                setPage(1);
-                                await fetchBookmarks(1);
-                                await refreshFolders(); // Refresh folder counts after deletion
-                              } catch (error) {
-                                console.error('Failed to delete bookmark:', error);
-                              }
-                            }
-                          }}
+                          onClick={() => handleDelete(bookmark._id)}
                         >
                           Delete
                         </MenuItem>
@@ -373,10 +343,17 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         ))}
       </VStack>
 
-      {/* Loading indicator for infinite scroll */}
       {hasMore && (
-        <Box ref={loadingRef} display="flex" justifyContent="center" p={4}>
-          {loadingMore && <Spinner />}
+        <Box display="flex" justifyContent="center" p={4}>
+          <Button
+            isLoading={loadingMore}
+            onClick={() => {
+              setPage(prev => prev + 1);
+              fetchBookmarks(page + 1);
+            }}
+          >
+            Load More
+          </Button>
         </Box>
       )}
     </VStack>

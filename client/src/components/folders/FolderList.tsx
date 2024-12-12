@@ -14,7 +14,7 @@ import {
   useColorModeValue,
   Badge,
 } from '@chakra-ui/react';
-import { FaFolder, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaFolder, FaEllipsisV, FaEdit, FaTrash, FaBookmark, FaStar } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
 
 interface Folder {
@@ -103,6 +103,80 @@ const FolderItem: React.FC<FolderItemProps> = ({ folder, level, onEdit, onDelete
   );
 };
 
+const AllBookmarksItem: React.FC = () => {
+  const { selectedFolder, setSelectedFolder, totalBookmarks } = useFolder();
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const selectedBgColor = useColorModeValue('blue.50', 'blue.900');
+
+  return (
+    <ListItem
+      px={4}
+      py={2}
+      pl={4}
+      bg={selectedFolder === null ? selectedBgColor : 'transparent'}
+      _hover={{ bg: bgColor }}
+      cursor="pointer"
+      display="flex"
+      alignItems="center"
+      onClick={() => setSelectedFolder(null)}
+      borderBottomWidth="1px"
+      borderBottomColor={useColorModeValue('gray.200', 'gray.700')}
+      mb={2}
+    >
+      <Icon
+        as={FaBookmark}
+        color="blue.500"
+        mr={2}
+      />
+      <Box flex={1}>
+        <Box display="flex" alignItems="center">
+          <Text fontWeight="bold">All Bookmarks</Text>
+          <Badge ml={2} colorScheme="blue" variant="subtle">
+            {totalBookmarks}
+          </Badge>
+        </Box>
+      </Box>
+    </ListItem>
+  );
+};
+
+const FavoritesItem: React.FC = () => {
+  const { selectedFolder, setSelectedFolder, totalFavorites } = useFolder();
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const selectedBgColor = useColorModeValue('blue.50', 'blue.900');
+
+  return (
+    <ListItem
+      px={4}
+      py={2}
+      pl={4}
+      bg={selectedFolder === 'favorites' ? selectedBgColor : 'transparent'}
+      _hover={{ bg: bgColor }}
+      cursor="pointer"
+      display="flex"
+      alignItems="center"
+      onClick={() => setSelectedFolder('favorites')}
+      borderBottomWidth="1px"
+      borderBottomColor={useColorModeValue('gray.200', 'gray.700')}
+      mb={2}
+    >
+      <Icon
+        as={FaStar}
+        color="yellow.400"
+        mr={2}
+      />
+      <Box flex={1}>
+        <Box display="flex" alignItems="center">
+          <Text fontWeight="bold">Favorites</Text>
+          <Badge ml={2} colorScheme="blue" variant="subtle">
+            {totalFavorites}
+          </Badge>
+        </Box>
+      </Box>
+    </ListItem>
+  );
+};
+
 const renderFolderTree = (
   folders: Folder[],
   level: number,
@@ -148,17 +222,17 @@ const FolderList: React.FC<FolderListProps> = ({ onEdit, onDelete }) => {
     );
   }
 
-  if (!folders.length) {
-    return (
-      <Box p={4}>
-        <Text color="gray.500">No folders yet</Text>
-      </Box>
-    );
-  }
-
   return (
     <List spacing={1}>
-      {renderFolderTree(folders, 0, onEdit, onDelete)}
+      <AllBookmarksItem />
+      <FavoritesItem />
+      {folders.length === 0 ? (
+        <Box p={4}>
+          <Text color="gray.500">No folders yet</Text>
+        </Box>
+      ) : (
+        renderFolderTree(folders, 0, onEdit, onDelete)
+      )}
     </List>
   );
 };

@@ -1,32 +1,55 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { folderAPI } from '../services/api';
+import { folderAPI, bookmarkAPI } from '../services/api';
 import { Folder } from '../types';
 
 interface FolderContextType {
   folders: Folder[];
-  selectedFolder: string | null;
+  selectedFolder: string | null | 'favorites';
   loading: boolean;
   error: string | null;
-  setSelectedFolder: (folderId: string | null) => void;
+  totalBookmarks: number;
+  totalFavorites: number;
+  setSelectedFolder: (folderId: string | null | 'favorites') => void;
   createFolder: (data: Partial<Folder>) => Promise<void>;
   updateFolder: (id: string, data: Partial<Folder>) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
   refreshFolders: () => Promise<void>;
+  refreshTotalBookmarks: () => Promise<void>;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null | 'favorites'>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalBookmarks, setTotalBookmarks] = useState(0);
+  const [totalFavorites, setTotalFavorites] = useState(0);
+
+  const refreshTotalBookmarks = async () => {
+    try {
+      const stats = await bookmarkAPI.getStats();
+      setTotalBookmarks(stats.totalBookmarks);
+      // Get total favorites count
+      const favoritesResponse = await bookmarkAPI.search({ favorite: true });
+      setTotalFavorites(favoritesResponse.total);
+    } catch (err) {
+      console.error('Error fetching bookmark stats:', err);
+    }
+  };
 
   const refreshFolders = async () => {
     try {
       setLoading(true);
-      const response = await folderAPI.getFolders();
-      setFolders(response);
+      const [foldersResponse, stats, favoritesResponse] = await Promise.all([
+        folderAPI.getFolders(),
+        bookmarkAPI.getStats(),
+        bookmarkAPI.search({ favorite: true })
+      ]);
+      setFolders(foldersResponse);
+      setTotalBookmarks(stats.totalBookmarks);
+      setTotalFavorites(favoritesResponse.total);
       setError(null);
     } catch (err) {
       setError('Failed to fetch folders');
@@ -78,11 +101,14 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     selectedFolder,
     loading,
     error,
+    totalBookmarks,
+    totalFavorites,
     setSelectedFolder,
     createFolder,
     updateFolder,
     deleteFolder,
     refreshFolders,
+    refreshTotalBookmarks,
   };
 
   return <FolderContext.Provider value={value}>{children}</FolderContext.Provider>;
