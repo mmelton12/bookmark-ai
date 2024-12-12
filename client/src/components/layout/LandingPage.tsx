@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Container, Heading, Text, VStack, HStack, Icon, SimpleGrid, useColorModeValue, Image, Divider, Avatar } from '@chakra-ui/react';
 import { FaBrain, FaSearch, FaTags, FaBookmark, FaRegLightbulb, FaRegClock, FaRegChartBar, FaRegComments, FaChrome, FaCog, FaFolderOpen, FaRocket, FaFirefox, FaSafari, FaEdge } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import PublicHeader from './PublicHeader';
 
 const Feature: React.FC<{ icon: any; title: string; text: string }> = ({ icon, title, text }) => {
   return (
@@ -190,202 +191,205 @@ const LandingPage: React.FC = () => {
 
   return (
     <Box>
-      {/* Hero Section */}
-      <SectionWrapper>
-        <VStack spacing={8} textAlign="center">
-          <Image
-            src="/logo-bookmarkai.svg"
-            alt="BookmarkAI Logo"
-            height="120px"
-            mb={4}
-          />
-          <Heading
-            fontSize={{ base: '3xl', md: '5xl' }}
-            fontWeight="bold"
-            lineHeight="shorter"
-          >
-            Transform Your Bookmarks with
-            <Text as="span" color="blue.500"> AI-Powered </Text>
-            Intelligence
-          </Heading>
-          <Text fontSize={{ base: 'lg', md: 'xl' }} color={textColor} maxW="2xl">
-            Import your existing browser bookmarks instantly and let AI organize, tag, and summarize them.
-            Never lose track of important content again.
-          </Text>
-          <HStack spacing={4} pt={4}>
+      <PublicHeader />
+      <Box pt="64px"> {/* Add padding to account for fixed header */}
+        {/* Hero Section */}
+        <SectionWrapper>
+          <VStack spacing={8} textAlign="center">
+            <Image
+              src="/logo-bookmarkai.svg"
+              alt="BookmarkAI Logo"
+              height="120px"
+              mb={4}
+            />
+            <Heading
+              fontSize={{ base: '3xl', md: '5xl' }}
+              fontWeight="bold"
+              lineHeight="shorter"
+            >
+              Transform Your Bookmarks with
+              <Text as="span" color="blue.500"> AI-Powered </Text>
+              Intelligence
+            </Heading>
+            <Text fontSize={{ base: 'lg', md: 'xl' }} color={textColor} maxW="2xl">
+              Import your existing browser bookmarks instantly and let AI organize, tag, and summarize them.
+              Never lose track of important content again.
+            </Text>
+            <HStack spacing={4} pt={4}>
+              <Button
+                size="lg"
+                colorScheme="blue"
+                onClick={() => navigate('/signup')}
+                height="60px"
+                px={8}
+              >
+                Get Started Free
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate('/login')}
+                height="60px"
+                px={8}
+              >
+                Sign In
+              </Button>
+            </HStack>
+          </VStack>
+        </SectionWrapper>
+
+        {/* Features Section */}
+        <SectionWrapper alternate>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
+            <Feature
+              icon={FaBookmark}
+              title="Easy Import"
+              text="Import your existing bookmarks from Chrome, Firefox, Safari, or Edge with just one click."
+            />
+            <Feature
+              icon={FaBrain}
+              title="AI-Powered Summaries"
+              text="Get instant AI-generated summaries of your bookmarked content, saving you valuable time."
+            />
+            <Feature
+              icon={FaTags}
+              title="Smart Tagging"
+              text="Automatically generate relevant tags for your bookmarks using advanced AI technology."
+            />
+            <Feature
+              icon={FaSearch}
+              title="Intelligent Search"
+              text="Find any bookmark instantly with our powerful search functionality across tags and summaries."
+            />
+          </SimpleGrid>
+        </SectionWrapper>
+
+        {/* How It Works Section */}
+        <SectionWrapper>
+          <VStack spacing={16}>
+            <VStack spacing={4}>
+              <Heading 
+                textAlign="center" 
+                fontSize={{ base: "3xl", md: "4xl" }}
+                bgGradient="linear(to-r, blue.400, blue.600)"
+                bgClip="text"
+              >
+                How It Works
+              </Heading>
+              <Text
+                textAlign="center"
+                fontSize="xl"
+                color={useColorModeValue('gray.600', 'gray.300')}
+                maxW="2xl"
+              >
+                Get started in minutes with our simple process
+              </Text>
+            </VStack>
+            
+            <Box w="100%" maxW="4xl" mx="auto">
+              <VStack spacing={6} align="stretch" position="relative">
+                <Step
+                  number={1}
+                  icon={FaBookmark}
+                  title="Import Your Bookmarks"
+                  description="Import your existing bookmarks from any major browser. We support Chrome, Firefox, Safari, and Edge."
+                  icons={[FaChrome, FaFirefox, FaSafari, FaEdge]}
+                />
+                <Step
+                  number={2}
+                  icon={FaBrain}
+                  title="AI Processing"
+                  description="Our AI automatically analyzes your bookmarks, generates summaries, and creates relevant tags."
+                />
+                <Step
+                  number={3}
+                  icon={FaFolderOpen}
+                  title="Smart Organization"
+                  description="Your bookmarks are automatically organized into meaningful categories and folders."
+                />
+                <Step
+                  number={4}
+                  icon={FaRocket}
+                  title="Easy Access"
+                  description="Find and access your bookmarks instantly using our powerful search and filtering tools."
+                />
+              </VStack>
+            </Box>
+          </VStack>
+        </SectionWrapper>
+
+        {/* Benefits Section */}
+        <SectionWrapper alternate>
+          <VStack spacing={12}>
+            <Heading textAlign="center" mb={8}>Why Choose BookmarkAI</Heading>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
+              <Feature
+                icon={FaRegLightbulb}
+                title="Seamless Import"
+                text="Import your existing browser bookmarks in seconds - no manual work required."
+              />
+              <Feature
+                icon={FaRegClock}
+                title="Time-Saving Summaries"
+                text="Get the key points of any article or webpage instantly with AI-generated summaries."
+              />
+              <Feature
+                icon={FaRegChartBar}
+                title="Better Organization"
+                text="Keep your digital resources perfectly organized with intelligent categorization."
+              />
+              <Feature
+                icon={FaRegComments}
+                title="Smart Collaboration"
+                text="Share and collaborate on bookmark collections with team members effortlessly."
+              />
+            </SimpleGrid>
+          </VStack>
+        </SectionWrapper>
+
+        {/* Testimonials Section */}
+        <SectionWrapper>
+          <VStack spacing={12}>
+            <Heading textAlign="center" mb={8}>What Our Users Say</Heading>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
+              <Testimonial
+                name="Sarah Johnson"
+                role="Content Creator"
+                content="Importing my Chrome bookmarks was a breeze! BookmarkAI organized everything perfectly and the AI summaries save me hours of reading time."
+              />
+              <Testimonial
+                name="Michael Chen"
+                role="Software Developer"
+                content="The browser import feature is fantastic. All my Firefox bookmarks were instantly organized and tagged. Finding resources is so much easier now."
+              />
+              <Testimonial
+                name="Emily Rodriguez"
+                role="Digital Marketer"
+                content="I imported thousands of bookmarks from multiple browsers and BookmarkAI handled them flawlessly. The AI-powered organization is simply amazing."
+              />
+            </SimpleGrid>
+          </VStack>
+        </SectionWrapper>
+
+        {/* Final CTA Section */}
+        <SectionWrapper alternate>
+          <VStack spacing={8} textAlign="center">
+            <Heading>Ready to Transform Your Bookmarks?</Heading>
+            <Text fontSize="xl" maxW="2xl" mx="auto" color={textColor}>
+              Import your browser bookmarks now and let AI organize them for you. Join thousands of users who have already revolutionized their bookmark management.
+            </Text>
             <Button
               size="lg"
               colorScheme="blue"
               onClick={() => navigate('/signup')}
               height="60px"
-              px={8}
+              px={12}
             >
-              Get Started Free
+              Get Started Now
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate('/login')}
-              height="60px"
-              px={8}
-            >
-              Sign In
-            </Button>
-          </HStack>
-        </VStack>
-      </SectionWrapper>
-
-      {/* Features Section */}
-      <SectionWrapper alternate>
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
-          <Feature
-            icon={FaBookmark}
-            title="Easy Import"
-            text="Import your existing bookmarks from Chrome, Firefox, Safari, or Edge with just one click."
-          />
-          <Feature
-            icon={FaBrain}
-            title="AI-Powered Summaries"
-            text="Get instant AI-generated summaries of your bookmarked content, saving you valuable time."
-          />
-          <Feature
-            icon={FaTags}
-            title="Smart Tagging"
-            text="Automatically generate relevant tags for your bookmarks using advanced AI technology."
-          />
-          <Feature
-            icon={FaSearch}
-            title="Intelligent Search"
-            text="Find any bookmark instantly with our powerful search functionality across tags and summaries."
-          />
-        </SimpleGrid>
-      </SectionWrapper>
-
-      {/* How It Works Section */}
-      <SectionWrapper>
-        <VStack spacing={16}>
-          <VStack spacing={4}>
-            <Heading 
-              textAlign="center" 
-              fontSize={{ base: "3xl", md: "4xl" }}
-              bgGradient="linear(to-r, blue.400, blue.600)"
-              bgClip="text"
-            >
-              How It Works
-            </Heading>
-            <Text
-              textAlign="center"
-              fontSize="xl"
-              color={useColorModeValue('gray.600', 'gray.300')}
-              maxW="2xl"
-            >
-              Get started in minutes with our simple process
-            </Text>
           </VStack>
-          
-          <Box w="100%" maxW="4xl" mx="auto">
-            <VStack spacing={6} align="stretch" position="relative">
-              <Step
-                number={1}
-                icon={FaBookmark}
-                title="Import Your Bookmarks"
-                description="Import your existing bookmarks from any major browser. We support Chrome, Firefox, Safari, and Edge."
-                icons={[FaChrome, FaFirefox, FaSafari, FaEdge]}
-              />
-              <Step
-                number={2}
-                icon={FaBrain}
-                title="AI Processing"
-                description="Our AI automatically analyzes your bookmarks, generates summaries, and creates relevant tags."
-              />
-              <Step
-                number={3}
-                icon={FaFolderOpen}
-                title="Smart Organization"
-                description="Your bookmarks are automatically organized into meaningful categories and folders."
-              />
-              <Step
-                number={4}
-                icon={FaRocket}
-                title="Easy Access"
-                description="Find and access your bookmarks instantly using our powerful search and filtering tools."
-              />
-            </VStack>
-          </Box>
-        </VStack>
-      </SectionWrapper>
-
-      {/* Benefits Section */}
-      <SectionWrapper alternate>
-        <VStack spacing={12}>
-          <Heading textAlign="center" mb={8}>Why Choose BookmarkAI</Heading>
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={10}>
-            <Feature
-              icon={FaRegLightbulb}
-              title="Seamless Import"
-              text="Import your existing browser bookmarks in seconds - no manual work required."
-            />
-            <Feature
-              icon={FaRegClock}
-              title="Time-Saving Summaries"
-              text="Get the key points of any article or webpage instantly with AI-generated summaries."
-            />
-            <Feature
-              icon={FaRegChartBar}
-              title="Better Organization"
-              text="Keep your digital resources perfectly organized with intelligent categorization."
-            />
-            <Feature
-              icon={FaRegComments}
-              title="Smart Collaboration"
-              text="Share and collaborate on bookmark collections with team members effortlessly."
-            />
-          </SimpleGrid>
-        </VStack>
-      </SectionWrapper>
-
-      {/* Testimonials Section */}
-      <SectionWrapper>
-        <VStack spacing={12}>
-          <Heading textAlign="center" mb={8}>What Our Users Say</Heading>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
-            <Testimonial
-              name="Sarah Johnson"
-              role="Content Creator"
-              content="Importing my Chrome bookmarks was a breeze! BookmarkAI organized everything perfectly and the AI summaries save me hours of reading time."
-            />
-            <Testimonial
-              name="Michael Chen"
-              role="Software Developer"
-              content="The browser import feature is fantastic. All my Firefox bookmarks were instantly organized and tagged. Finding resources is so much easier now."
-            />
-            <Testimonial
-              name="Emily Rodriguez"
-              role="Digital Marketer"
-              content="I imported thousands of bookmarks from multiple browsers and BookmarkAI handled them flawlessly. The AI-powered organization is simply amazing."
-            />
-          </SimpleGrid>
-        </VStack>
-      </SectionWrapper>
-
-      {/* Final CTA Section */}
-      <SectionWrapper alternate>
-        <VStack spacing={8} textAlign="center">
-          <Heading>Ready to Transform Your Bookmarks?</Heading>
-          <Text fontSize="xl" maxW="2xl" mx="auto" color={textColor}>
-            Import your browser bookmarks now and let AI organize them for you. Join thousands of users who have already revolutionized their bookmark management.
-          </Text>
-          <Button
-            size="lg"
-            colorScheme="blue"
-            onClick={() => navigate('/signup')}
-            height="60px"
-            px={12}
-          >
-            Get Started Now
-          </Button>
-        </VStack>
-      </SectionWrapper>
+        </SectionWrapper>
+      </Box>
     </Box>
   );
 };

@@ -30,10 +30,11 @@ import {
   AlertIcon,
   Progress,
   Image,
+  Link,
 } from '@chakra-ui/react';
-import { HamburgerIcon, SunIcon, MoonIcon, SearchIcon, SettingsIcon, AddIcon } from '@chakra-ui/icons';
+import { HamburgerIcon, SunIcon, MoonIcon, SearchIcon, SettingsIcon, AddIcon, QuestionIcon } from '@chakra-ui/icons';
 import { FaFolder } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
@@ -70,7 +71,6 @@ const Header: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      // Add http:// if no protocol is specified
       let url = newBookmarkUrl;
       if (!/^https?:\/\//i.test(url)) {
         url = 'http://' + url;
@@ -80,7 +80,6 @@ const Header: React.FC = () => {
       setNewBookmarkUrl('');
       onClose();
       
-      // Dispatch bookmark creation event
       window.dispatchEvent(new Event('bookmarkCreated'));
       
       toast({
@@ -91,13 +90,11 @@ const Header: React.FC = () => {
         isClosable: true,
       });
 
-      // Navigate to dashboard to show the new bookmark
       if (window.location.pathname !== '/dashboard') {
         navigate('/dashboard');
       }
     } catch (error: any) {
       console.error('Error adding bookmark:', error);
-      // Check for duplicate bookmark error
       if (error.message === 'This URL has already been bookmarked') {
         setError('This URL has already been bookmarked');
       } else if (error.message.includes('OpenAI API key')) {
@@ -111,7 +108,6 @@ const Header: React.FC = () => {
   };
 
   const handleOpenFolders = () => {
-    // Call the globally exposed folder drawer open function
     if ((window as any).openFolderDrawer) {
       (window as any).openFolderDrawer();
     }
@@ -123,10 +119,8 @@ const Header: React.FC = () => {
     onClose();
   };
 
-  // Force refresh user picture from Google
   const getAvatarSrc = () => {
     if (user?.picture) {
-      // Add a cache-busting parameter
       return `${user.picture}?t=${Date.now()}`;
     }
     return undefined;
@@ -168,25 +162,37 @@ const Header: React.FC = () => {
           </Flex>
 
           <Flex alignItems="center" display={{ base: 'none', md: 'flex' }}>
-            <Button variant="ghost" mr={2} onClick={handleDashboardClick}>
-              Dashboard
-            </Button>
-            <Button
-              variant="ghost"
-              mr={2}
-              leftIcon={<SearchIcon />}
-              onClick={() => navigate('/search')}
-            >
-              Search
-            </Button>
-            <Button
-              variant="ghost"
-              mr={2}
-              leftIcon={<AddIcon />}
-              onClick={onOpen}
-            >
-              Add Bookmark
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" mr={2} onClick={handleDashboardClick}>
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  mr={2}
+                  leftIcon={<SearchIcon />}
+                  onClick={() => navigate('/search')}
+                >
+                  Search
+                </Button>
+                <Button
+                  variant="ghost"
+                  mr={2}
+                  leftIcon={<AddIcon />}
+                  onClick={onOpen}
+                >
+                  Add Bookmark
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link as={RouterLink} to="/faq">
+                  <Button variant="ghost" mr={2} leftIcon={<QuestionIcon />}>
+                    FAQ
+                  </Button>
+                </Link>
+              </>
+            )}
             <Tooltip label={colorMode === 'light' ? 'Dark mode' : 'Light mode'}>
               <IconButton
                 aria-label="Toggle color mode"
@@ -197,31 +203,41 @@ const Header: React.FC = () => {
               />
             </Tooltip>
             
-            {/* Account Menu */}
-            <Menu>
-              <MenuButton>
-                <Avatar
-                  size="sm"
-                  name={user?.name || user?.email}
-                  src={getAvatarSrc()}
-                  cursor="pointer"
-                />
-              </MenuButton>
-              <MenuList>
-                <Box px={3} py={2}>
-                  <Text fontWeight="medium">{user?.name || 'User'}</Text>
-                  <Text fontSize="sm" color="gray.500">
-                    {user?.email}
-                  </Text>
-                </Box>
-                <MenuDivider />
-                <MenuItem icon={<SettingsIcon />} onClick={() => navigate('/account')}>
-                  Account Settings
-                </MenuItem>
-                <MenuDivider />
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
-              </MenuList>
-            </Menu>
+            {user ? (
+              <Menu>
+                <MenuButton>
+                  <Avatar
+                    size="sm"
+                    name={user?.name || user?.email}
+                    src={getAvatarSrc()}
+                    cursor="pointer"
+                  />
+                </MenuButton>
+                <MenuList>
+                  <Box px={3} py={2}>
+                    <Text fontWeight="medium">{user?.name || 'User'}</Text>
+                    <Text fontSize="sm" color="gray.500">
+                      {user?.email}
+                    </Text>
+                  </Box>
+                  <MenuDivider />
+                  <MenuItem icon={<SettingsIcon />} onClick={() => navigate('/account')}>
+                    Account Settings
+                  </MenuItem>
+                  <MenuDivider />
+                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                </MenuList>
+              </Menu>
+            ) : (
+              <>
+                <Button variant="ghost" mr={2} onClick={() => navigate('/login')}>
+                  Sign In
+                </Button>
+                <Button colorScheme="blue" onClick={() => navigate('/signup')}>
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Flex>
 
           {/* Mobile Menu */}
@@ -234,16 +250,30 @@ const Header: React.FC = () => {
                 aria-label="Menu"
               />
               <MenuList>
-                <MenuItem onClick={handleDashboardClick}>Dashboard</MenuItem>
-                <MenuItem onClick={() => navigate('/search')}>Search</MenuItem>
-                <MenuItem onClick={onOpen}>Add Bookmark</MenuItem>
-                <MenuItem icon={<FaFolder />} onClick={handleOpenFolders}>Folders</MenuItem>
-                <MenuItem onClick={() => navigate('/account')}>Account Settings</MenuItem>
+                {user ? (
+                  <>
+                    <MenuItem onClick={handleDashboardClick}>Dashboard</MenuItem>
+                    <MenuItem onClick={() => navigate('/search')}>Search</MenuItem>
+                    <MenuItem onClick={onOpen}>Add Bookmark</MenuItem>
+                    <MenuItem icon={<FaFolder />} onClick={handleOpenFolders}>Folders</MenuItem>
+                    <MenuItem onClick={() => navigate('/account')}>Account Settings</MenuItem>
+                  </>
+                ) : (
+                  <>
+                    <MenuItem onClick={() => navigate('/faq')}>FAQ</MenuItem>
+                    <MenuItem onClick={() => navigate('/login')}>Sign In</MenuItem>
+                    <MenuItem onClick={() => navigate('/signup')}>Sign Up</MenuItem>
+                  </>
+                )}
                 <MenuItem onClick={toggleColorMode}>
                   {colorMode === 'light' ? 'Dark Mode' : 'Light Mode'}
                 </MenuItem>
-                <MenuDivider />
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                {user && (
+                  <>
+                    <MenuDivider />
+                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                  </>
+                )}
               </MenuList>
             </Menu>
           </Box>

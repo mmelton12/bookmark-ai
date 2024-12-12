@@ -12,8 +12,26 @@ import SearchPage from './components/search/SearchPage';
 import ChatPage from './components/chat/ChatPage';
 import FloatingChatBot from './components/chat/FloatingChatBot';
 import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import LandingPage from './components/layout/LandingPage';
+import FAQ from './components/pages/FAQ';
+import Privacy from './components/pages/Privacy';
+import Terms from './components/pages/Terms';
+import Contact from './components/pages/Contact';
+import CookieConsent from './components/common/CookieConsent';
 import theme from './theme';
+
+// Public layout wrapper component
+const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <Box minH="100vh" display="flex" flexDirection="column">
+      <Box flex="1">
+        {children}
+      </Box>
+      <Footer />
+    </Box>
+  );
+};
 
 // Protected route wrapper component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -46,25 +64,27 @@ const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   return (
-    <Box
-      minH="100vh"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      bg="gray.50"
-      p={4}
-    >
+    <PublicLayout>
       <Box
-        w="full"
-        maxW="md"
-        p={8}
-        borderRadius="lg"
-        boxShadow="lg"
-        bg="white"
+        minH="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bg="gray.50"
+        p={4}
       >
-        {children}
+        <Box
+          w="full"
+          maxW="md"
+          p={8}
+          borderRadius="lg"
+          boxShadow="lg"
+          bg="white"
+        >
+          {children}
+        </Box>
       </Box>
-    </Box>
+    </PublicLayout>
   );
 };
 
@@ -94,7 +114,15 @@ const AppRoutes: React.FC = () => {
         {/* Public Routes */}
         <Route
           path="/"
-          element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />}
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" />
+            ) : (
+              <PublicLayout>
+                <LandingPage />
+              </PublicLayout>
+            )
+          }
         />
         <Route
           path="/login"
@@ -115,6 +143,40 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/auth/callback"
           element={<OAuthCallback />}
+        />
+
+        {/* Public Information Pages */}
+        <Route
+          path="/faq"
+          element={
+            <PublicLayout>
+              <FAQ />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <PublicLayout>
+              <Privacy />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <PublicLayout>
+              <Terms />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <PublicLayout>
+              <Contact />
+            </PublicLayout>
+          }
         />
 
         {/* Protected Routes */}
@@ -159,6 +221,7 @@ const AppRoutes: React.FC = () => {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {isAuthenticated && <FloatingChatBot />}
+      <CookieConsent />
     </>
   );
 };

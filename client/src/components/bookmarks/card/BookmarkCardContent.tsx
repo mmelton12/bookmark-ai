@@ -5,6 +5,8 @@ import {
   Alert,
   AlertIcon,
   useColorModeValue,
+  Badge,
+  Box,
 } from '@chakra-ui/react';
 import { ExternalLinkIcon } from '@chakra-ui/icons';
 import { Bookmark } from '../../../types';
@@ -21,20 +23,39 @@ const BookmarkCardContent: React.FC<BookmarkCardContentProps> = ({ bookmark }) =
   const isError = bookmark.aiSummary?.toLowerCase().includes('failed') ||
                  bookmark.aiSummary?.toLowerCase().includes('error');
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Article':
+        return 'blue';
+      case 'Video':
+        return 'red';
+      case 'Research':
+        return 'green';
+      default:
+        return 'gray';
+    }
+  };
+
   return (
     <>
-      <Link
-        href={bookmark.url}
-        isExternal
-        color={linkColor}
-        fontSize="sm"
-        noOfLines={1}
-        display="flex"
-        alignItems="center"
-      >
-        {bookmark.url}
-        <ExternalLinkIcon mx="2px" />
-      </Link>
+      <Box display="flex" alignItems="center" mb={2}>
+        <Link
+          href={bookmark.url}
+          isExternal
+          color={linkColor}
+          fontSize="sm"
+          noOfLines={1}
+          display="flex"
+          alignItems="center"
+          flex="1"
+        >
+          {bookmark.url}
+          <ExternalLinkIcon mx="2px" />
+        </Link>
+        <Badge colorScheme={getCategoryColor(bookmark.category)} ml={2}>
+          {bookmark.category}
+        </Badge>
+      </Box>
 
       {bookmark.description && (
         <Text color={textColor} fontSize="sm" noOfLines={2}>
