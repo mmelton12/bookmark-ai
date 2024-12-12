@@ -1,7 +1,55 @@
 // URL cleaning utility for consistent bookmark URL handling
 
 /**
+ * Extracts YouTube video ID from various YouTube URL formats
+ * @param {string} url - The YouTube URL
+ * @returns {string|null} - The video ID or null if not found
+ */
+function extractYouTubeVideoId(url) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // Handle youtu.be format
+        if (hostname === 'youtu.be') {
+            return urlObj.pathname.slice(1).split('?')[0]; // Remove leading '/' and any query params
+        }
+        
+        // Handle youtube.com format
+        if (hostname === 'youtube.com' || hostname === 'www.youtube.com') {
+            const videoId = urlObj.searchParams.get('v');
+            if (videoId) {
+                return videoId;
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error extracting YouTube video ID:', error);
+        return null;
+    }
+}
+
+/**
+ * Determines if a URL is a YouTube URL
+ * @param {string} url - The URL to check
+ * @returns {boolean} - True if it's a YouTube URL
+ */
+function isYouTubeUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        return hostname === 'youtube.com' || 
+               hostname === 'www.youtube.com' || 
+               hostname === 'youtu.be';
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
  * Cleans and normalizes a URL by:
+ * - Converting YouTube URLs to youtu.be format
  * - Ensuring it has a protocol (http:// or https://)
  * - Removing trailing slashes
  * - Removing unnecessary 'www.' prefix
@@ -18,6 +66,14 @@ function cleanUrl(url) {
         // Add protocol if missing
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
+        }
+
+        // Special handling for YouTube URLs
+        if (isYouTubeUrl(url)) {
+            const videoId = extractYouTubeVideoId(url);
+            if (videoId) {
+                return `https://youtu.be/${videoId}`;
+            }
         }
 
         const urlObj = new URL(url);
@@ -41,5 +97,7 @@ function cleanUrl(url) {
 }
 
 module.exports = {
-    cleanUrl
+    cleanUrl,
+    extractYouTubeVideoId,
+    isYouTubeUrl
 };

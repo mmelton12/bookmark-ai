@@ -1,24 +1,50 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { cleanUrl } = require('./urlCleaner');
 
 const isYouTubeUrl = (url) => {
-    return url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname === 'youtu.be' || 
+               urlObj.hostname === 'youtube.com' || 
+               urlObj.hostname === 'www.youtube.com';
+    } catch (error) {
+        return false;
+    }
 };
 
 const getYouTubeVideoId = (url) => {
-    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-    return match ? match[1] : null;
+    try {
+        const urlObj = new URL(url);
+        
+        // Handle youtu.be format
+        if (urlObj.hostname === 'youtu.be') {
+            return urlObj.pathname.slice(1);
+        }
+        
+        // Handle youtube.com format
+        if (urlObj.hostname === 'youtube.com' || urlObj.hostname === 'www.youtube.com') {
+            return urlObj.searchParams.get('v');
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
 };
 
 const fetchYouTubeContent = async (url) => {
-    const videoId = getYouTubeVideoId(url);
+    // Clean the URL first to ensure consistent format
+    const cleanedUrl = cleanUrl(url);
+    const videoId = getYouTubeVideoId(cleanedUrl);
+    
     if (!videoId) {
         throw new Error('Invalid YouTube URL');
     }
 
     try {
         // Use YouTube's oEmbed endpoint to get video information
-        const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+        const oEmbedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanedUrl)}&format=json`;
         const response = await axios.get(oEmbedUrl);
         const { title, author_name } = response.data;
 
@@ -36,13 +62,16 @@ const fetchContent = async (url) => {
     try {
         console.log('Fetching content from URL:', url);
 
+        // Clean the URL first
+        const cleanedUrl = cleanUrl(url);
+
         // Check if it's a YouTube URL
-        if (isYouTubeUrl(url)) {
-            return await fetchYouTubeContent(url);
+        if (isYouTubeUrl(cleanedUrl)) {
+            return await fetchYouTubeContent(cleanedUrl);
         }
         
         // Configure axios with headers to mimic a browser
-        const response = await axios.get(url, {
+        const response = await axios.get(cleanedUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -125,7 +154,7 @@ const fetchContent = async (url) => {
         console.log('Successfully fetched content:', {
             title: title.trim(),
             contentLength: content.length,
-            url
+            url: cleanedUrl
         });
 
         // Limit content length but ensure we don't cut in the middle of a word
