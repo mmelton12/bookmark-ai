@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -52,13 +52,18 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement | null>(null);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  const fetchBookmarks = useCallback(async () => {
+  const fetchBookmarks = useCallback(async (pageNum: number) => {
     try {
-      setLoading(true);
+      setLoadingMore(pageNum > 1);
       let response;
       
       if (searchQuery || selectedTag || selectedCategory) {
@@ -68,25 +73,70 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
           tags: selectedTag ? [selectedTag] : [],
           folderId: selectedFolder,
           category: selectedCategory
-        });
+        }, pageNum);
       } else {
         // Use regular getBookmarks endpoint when no search/filter is active
-        response = await bookmarkAPI.getBookmarks(selectedFolder);
+        response = await bookmarkAPI.getBookmarks(selectedFolder, pageNum);
       }
       
-      setBookmarks(response.data);
+      if (pageNum === 1) {
+        setBookmarks(response.data);
+      } else {
+        setBookmarks(prev => [...prev, ...response.data]);
+      }
+      setHasMore(response.hasMore);
       setError(null);
     } catch (err) {
       setError('Failed to fetch bookmarks');
       console.error('Error fetching bookmarks:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
 
+  // Set up intersection observer
   useEffect(() => {
-    fetchBookmarks();
-  }, [fetchBookmarks]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observerRef.current = observer;
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loadingMore]);
+
+  // Observe loading div
+  useEffect(() => {
+    if (loadingRef.current && observerRef.current) {
+      observerRef.current.observe(loadingRef.current);
+    }
+    return () => {
+      if (loadingRef.current && observerRef.current) {
+        observerRef.current.unobserve(loadingRef.current);
+      }
+    };
+  }, [loadingRef.current]);
+
+  // Fetch bookmarks when page changes
+  useEffect(() => {
+    fetchBookmarks(page);
+  }, [fetchBookmarks, page]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    setBookmarks([]);
+  }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
 
   const handleCheckboxChange = (bookmarkId: string) => {
     setSelectedBookmarks(prev => {
@@ -102,7 +152,8 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     if (window.confirm('Are you sure you want to delete the selected bookmarks?')) {
       try {
         await Promise.all(selectedBookmarks.map(id => bookmarkAPI.delete(id)));
-        await fetchBookmarks();
+        setPage(1);
+        await fetchBookmarks(1);
         await refreshFolders(); // Refresh folder counts after deletion
         setSelectedBookmarks([]);
       } catch (error) {
@@ -118,7 +169,8 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         await bookmarkAPI.updateBookmark(bookmarkId, {
           isFavorite: !bookmark.isFavorite,
         });
-        await fetchBookmarks();
+        setPage(1);
+        await fetchBookmarks(1);
       }
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
@@ -138,7 +190,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     }
   };
 
-  if (loading) {
+  if (loading && page === 1) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" p={4}>
         <Spinner />
@@ -270,7 +322,8 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                             if (window.confirm('Are you sure you want to delete this bookmark?')) {
                               try {
                                 await bookmarkAPI.delete(bookmark._id);
-                                await fetchBookmarks();
+                                setPage(1);
+                                await fetchBookmarks(1);
                                 await refreshFolders(); // Refresh folder counts after deletion
                               } catch (error) {
                                 console.error('Failed to delete bookmark:', error);
@@ -319,6 +372,13 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
           </Box>
         ))}
       </VStack>
+
+      {/* Loading indicator for infinite scroll */}
+      {hasMore && (
+        <Box ref={loadingRef} display="flex" justifyContent="center" p={4}>
+          {loadingMore && <Spinner />}
+        </Box>
+      )}
     </VStack>
   );
 };

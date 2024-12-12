@@ -5,6 +5,8 @@ export interface User {
   picture?: string;
   googleId?: string;
   openAiKey?: string;
+  claudeKey?: string;
+  aiProvider?: 'openai' | 'claude';
   createdAt: string;
   updatedAt: string;
 }
@@ -95,6 +97,8 @@ export interface UserUpdateInput {
   name?: string;
   email?: string;
   openAiKey?: string;
+  claudeKey?: string;
+  aiProvider?: 'openai' | 'claude';
 }
 
 export interface PasswordUpdateInput {

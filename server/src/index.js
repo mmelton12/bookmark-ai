@@ -28,18 +28,19 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware
+// Session middleware - MUST be before passport
 app.use(session({
     secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
-// Initialize passport
+// Initialize passport and session
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -56,7 +57,7 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error:', err);
     res.status(500).json({
         message: 'Something went wrong!',
         error: process.env.NODE_ENV === 'development' ? err.message : {}

@@ -35,6 +35,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         select: false // Don't include in regular queries for security
     },
+    claudeKey: {
+        type: String,
+        select: false // Don't include in regular queries for security
+    },
+    aiProvider: {
+        type: String,
+        enum: ['openai', 'claude'],
+        default: 'openai'
+    },
     createdAt: {
         type: Date,
         default: Date.now

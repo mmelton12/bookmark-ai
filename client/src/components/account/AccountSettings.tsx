@@ -29,6 +29,8 @@ import {
   InputRightElement,
   IconButton,
   Spinner,
+  Select,
+  FormHelperText,
 } from '@chakra-ui/react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
@@ -129,7 +131,10 @@ const AccountSettings: React.FC = () => {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [openAiKey, setOpenAiKey] = useState(user?.openAiKey || '');
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [claudeKey, setClaudeKey] = useState(user?.claudeKey || '');
+  const [aiProvider, setAiProvider] = useState<'openai' | 'claude'>(user?.aiProvider || 'openai');
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+  const [showClaudeKey, setShowClaudeKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { isOpen: isPasswordModalOpen, onOpen: onPasswordModalOpen, onClose: onPasswordModalClose } = useDisclosure();
   const { isOpen: isImportModalOpen, onOpen: onImportModalOpen, onClose: onImportModalClose } = useDisclosure();
@@ -164,7 +169,13 @@ const AccountSettings: React.FC = () => {
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
-      await updateProfile({ name, email, openAiKey });
+      await updateProfile({ 
+        name, 
+        email, 
+        openAiKey, 
+        claudeKey,
+        aiProvider 
+      });
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been successfully updated.',
@@ -228,19 +239,51 @@ const AccountSettings: React.FC = () => {
                       />
                     </FormControl>
                     <FormControl>
+                      <FormLabel>AI Provider</FormLabel>
+                      <Select
+                        value={aiProvider}
+                        onChange={(e) => setAiProvider(e.target.value as 'openai' | 'claude')}
+                      >
+                        <option value="openai">OpenAI (GPT-4)</option>
+                        <option value="claude">Anthropic (Claude)</option>
+                      </Select>
+                      <FormHelperText>
+                        Select which AI provider to use for analyzing bookmarks
+                      </FormHelperText>
+                    </FormControl>
+                    <FormControl>
                       <FormLabel>OpenAI API Key</FormLabel>
                       <InputGroup>
                         <Input
-                          type={showApiKey ? 'text' : 'password'}
+                          type={showOpenAiKey ? 'text' : 'password'}
                           value={openAiKey}
                           onChange={(e) => setOpenAiKey(e.target.value)}
                           placeholder="Enter your OpenAI API key"
                         />
                         <InputRightElement>
                           <IconButton
-                            aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                            icon={showApiKey ? <ViewOffIcon /> : <ViewIcon />}
-                            onClick={() => setShowApiKey(!showApiKey)}
+                            aria-label={showOpenAiKey ? 'Hide API key' : 'Show API key'}
+                            icon={showOpenAiKey ? <ViewOffIcon /> : <ViewIcon />}
+                            onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                            variant="ghost"
+                          />
+                        </InputRightElement>
+                      </InputGroup>
+                    </FormControl>
+                    <FormControl>
+                      <FormLabel>Claude API Key</FormLabel>
+                      <InputGroup>
+                        <Input
+                          type={showClaudeKey ? 'text' : 'password'}
+                          value={claudeKey}
+                          onChange={(e) => setClaudeKey(e.target.value)}
+                          placeholder="Enter your Claude API key"
+                        />
+                        <InputRightElement>
+                          <IconButton
+                            aria-label={showClaudeKey ? 'Hide API key' : 'Show API key'}
+                            icon={showClaudeKey ? <ViewOffIcon /> : <ViewIcon />}
+                            onClick={() => setShowClaudeKey(!showClaudeKey)}
                             variant="ghost"
                           />
                         </InputRightElement>
@@ -254,7 +297,13 @@ const AccountSettings: React.FC = () => {
                     </Text>
                     <Text color="gray.500">{user?.email}</Text>
                     <Text color="gray.500">
-                      {user?.openAiKey ? '••••••••••••••••' : 'No API key set'}
+                      AI Provider: {user?.aiProvider === 'claude' ? 'Claude' : 'OpenAI'}
+                    </Text>
+                    <Text color="gray.500">
+                      OpenAI API Key: {user?.openAiKey ? '••••••••••••••••' : 'Not set'}
+                    </Text>
+                    <Text color="gray.500">
+                      Claude API Key: {user?.claudeKey ? '••••••••••••••••' : 'Not set'}
                     </Text>
                   </>
                 )}

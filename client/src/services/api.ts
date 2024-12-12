@@ -68,15 +68,17 @@ export const authAPI = {
 
 // Bookmark API
 export const bookmarkAPI = {
-    getBookmarks: (folderId?: string | null): Promise<PaginatedResponse<Bookmark>> => 
+    getBookmarks: (folderId?: string | null, page: number = 1, limit: number = 24): Promise<PaginatedResponse<Bookmark>> => 
         axios.get(`${API_URL}/bookmarks`, {
-            params: { folderId }
+            params: { folderId, page, limit }
         }).then(res => res.data),
 
-    search: (params: SearchParams): Promise<PaginatedResponse<Bookmark>> => {
+    search: (params: SearchParams, page: number = 1, limit: number = 24): Promise<PaginatedResponse<Bookmark>> => {
         const searchParams = {
             ...params,
-            tags: params.tags?.join(',')
+            tags: params.tags?.join(','),
+            page,
+            limit
         };
         return axios.get(`${API_URL}/bookmarks/search`, { params: searchParams })
             .then(response => response.data);

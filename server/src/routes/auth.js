@@ -16,8 +16,8 @@ router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
     async (req, res) => {
         try {
-            // Get full user data including openAiKey
-            const user = await User.findById(req.user.id).select('+openAiKey');
+            // Get full user data including API keys
+            const user = await User.findById(req.user.id).select('+openAiKey +claudeKey');
             
             // Create JWT token
             const token = jwt.sign(
@@ -63,14 +63,15 @@ router.post('/signup', [
         // Create user
         user = new User({
             email,
-            password
+            password,
+            aiProvider: 'openai' // Default to OpenAI
         });
 
         // Save user
         await user.save();
 
-        // Get full user data including openAiKey
-        user = await User.findById(user.id).select('+openAiKey');
+        // Get full user data including API keys
+        user = await User.findById(user.id).select('+openAiKey +claudeKey');
 
         // Create token
         const token = jwt.sign(
@@ -87,6 +88,8 @@ router.post('/signup', [
                 name: user.name,
                 picture: user.picture,
                 openAiKey: user.openAiKey,
+                claudeKey: user.claudeKey,
+                aiProvider: user.aiProvider,
                 createdAt: user.createdAt
             }
         });
@@ -114,7 +117,7 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ email }).select('+password +openAiKey');
+        const user = await User.findOne({ email }).select('+password +openAiKey +claudeKey');
         if (!user) {
             return res.status(400).json({
                 message: 'Invalid credentials'
@@ -144,6 +147,8 @@ router.post('/login', [
                 name: user.name,
                 picture: user.picture,
                 openAiKey: user.openAiKey,
+                claudeKey: user.claudeKey,
+                aiProvider: user.aiProvider,
                 createdAt: user.createdAt
             }
         });
@@ -177,8 +182,8 @@ router.post('/logout', (req, res) => {
 // @access  Private
 router.get('/user', protect, async (req, res) => {
     try {
-        // Explicitly select openAiKey field
-        const user = await User.findById(req.user.id).select('-password +openAiKey');
+        // Explicitly select API key fields
+        const user = await User.findById(req.user.id).select('-password +openAiKey +claudeKey');
         res.json(user);
     } catch (error) {
         console.error(error);
@@ -194,7 +199,9 @@ router.get('/user', protect, async (req, res) => {
 router.put('/profile', protect, [
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty if provided'),
     body('email').optional().isEmail().withMessage('Please provide a valid email'),
-    body('openAiKey').optional().trim().notEmpty().withMessage('API key cannot be empty if provided')
+    body('openAiKey').optional().trim().notEmpty().withMessage('OpenAI API key cannot be empty if provided'),
+    body('claudeKey').optional().trim().notEmpty().withMessage('Claude API key cannot be empty if provided'),
+    body('aiProvider').optional().isIn(['openai', 'claude']).withMessage('Invalid AI provider')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -202,11 +209,27 @@ router.put('/profile', protect, [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email, openAiKey } = req.body;
+        const { name, email, openAiKey, claudeKey, aiProvider } = req.body;
         const updateFields = {};
 
         if (name) updateFields.name = name;
         if (openAiKey !== undefined) updateFields.openAiKey = openAiKey;
+        if (claudeKey !== undefined) updateFields.claudeKey = claudeKey;
+        if (aiProvider) {
+            // Validate that the user has the required API key for the selected provider
+            if (aiProvider === 'openai' && !openAiKey && !req.user.openAiKey) {
+                return res.status(400).json({
+                    message: 'OpenAI API key is required when selecting OpenAI as provider'
+                });
+            }
+            if (aiProvider === 'claude' && !claudeKey && !req.user.claudeKey) {
+                return res.status(400).json({
+                    message: 'Claude API key is required when selecting Claude as provider'
+                });
+            }
+            updateFields.aiProvider = aiProvider;
+        }
+
         if (email) {
             // Check if email is already taken by another user
             const existingUser = await User.findOne({ email });
@@ -222,7 +245,7 @@ router.put('/profile', protect, [
             req.user.id,
             { $set: updateFields },
             { new: true }
-        ).select('-password +openAiKey');
+        ).select('-password +openAiKey +claudeKey');
 
         if (!user) {
             return res.status(404).json({
