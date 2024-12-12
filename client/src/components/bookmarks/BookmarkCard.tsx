@@ -65,6 +65,11 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('bookmarkId', bookmark._id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <Box
       p={5}
@@ -76,6 +81,10 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
       position="relative"
       _hover={{ shadow: 'lg' }}
       transition="all 0.2s"
+      draggable="true"
+      onDragStart={handleDragStart}
+      cursor="grab"
+      _active={{ cursor: 'grabbing' }}
     >
       <VStack align="stretch" spacing={3}>
         <BookmarkCardHeader

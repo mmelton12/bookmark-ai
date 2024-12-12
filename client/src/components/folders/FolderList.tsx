@@ -13,6 +13,7 @@ import {
   Spinner,
   useColorModeValue,
   Badge,
+  useToast,
 } from '@chakra-ui/react';
 import { FaFolder, FaEllipsisV, FaEdit, FaTrash, FaBookmark, FaStar } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
@@ -36,21 +37,66 @@ interface FolderItemProps {
 }
 
 const FolderItem: React.FC<FolderItemProps> = ({ folder, level, onEdit, onDelete }) => {
-  const { selectedFolder, setSelectedFolder } = useFolder();
+  const { selectedFolder, setSelectedFolder, moveBookmarkToFolder } = useFolder();
   const bgColor = useColorModeValue('gray.50', 'gray.700');
   const selectedBgColor = useColorModeValue('blue.50', 'blue.900');
+  const dropTargetBg = useColorModeValue('blue.100', 'blue.800');
+  const toast = useToast();
+  const [isDropTarget, setIsDropTarget] = React.useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isDropTarget) {
+      setIsDropTarget(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDropTarget(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDropTarget(false);
+    const bookmarkId = e.dataTransfer.getData('bookmarkId');
+    
+    if (bookmarkId) {
+      try {
+        await moveBookmarkToFolder(bookmarkId, folder._id);
+        toast({
+          title: 'Bookmark moved',
+          description: `Successfully moved to ${folder.name}`,
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error moving bookmark',
+          description: error instanceof Error ? error.message : 'Failed to move bookmark',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    }
+  };
 
   return (
     <ListItem
       px={4}
       py={2}
       pl={`${level * 24 + 16}px`}
-      bg={selectedFolder === folder._id ? selectedBgColor : 'transparent'}
+      bg={isDropTarget ? dropTargetBg : selectedFolder === folder._id ? selectedBgColor : 'transparent'}
       _hover={{ bg: bgColor }}
       cursor="pointer"
       display="flex"
       alignItems="center"
       onClick={() => setSelectedFolder(folder._id)}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      transition="background-color 0.2s"
     >
       <Icon
         as={FaFolder}

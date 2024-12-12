@@ -15,6 +15,7 @@ interface FolderContextType {
   deleteFolder: (id: string) => Promise<void>;
   refreshFolders: () => Promise<void>;
   refreshTotalBookmarks: () => Promise<void>;
+  moveBookmarkToFolder: (bookmarkId: string, folderId: string) => Promise<void>;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
@@ -92,6 +93,16 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const moveBookmarkToFolder = async (bookmarkId: string, folderId: string) => {
+    try {
+      await bookmarkAPI.updateBookmark(bookmarkId, { folder: folderId });
+      await refreshFolders();
+    } catch (err) {
+      setError('Failed to move bookmark');
+      throw err;
+    }
+  };
+
   useEffect(() => {
     refreshFolders();
   }, []);
@@ -109,6 +120,7 @@ export const FolderProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteFolder,
     refreshFolders,
     refreshTotalBookmarks,
+    moveBookmarkToFolder,
   };
 
   return <FolderContext.Provider value={value}>{children}</FolderContext.Provider>;
