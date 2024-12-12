@@ -123,6 +123,15 @@ const Header: React.FC = () => {
     onClose();
   };
 
+  // Force refresh user picture from Google
+  const getAvatarSrc = () => {
+    if (user?.picture) {
+      // Add a cache-busting parameter
+      return `${user.picture}?t=${Date.now()}`;
+    }
+    return undefined;
+  };
+
   return (
     <Box
       as="header"
@@ -194,7 +203,7 @@ const Header: React.FC = () => {
                 <Avatar
                   size="sm"
                   name={user?.name || user?.email}
-                  src={user?.picture}
+                  src={getAvatarSrc()}
                   cursor="pointer"
                 />
               </MenuButton>
