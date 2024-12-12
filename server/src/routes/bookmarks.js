@@ -207,6 +207,10 @@ router.post('/bulk', protect, async (req, res) => {
     try {
         const { action, bookmarkIds, data } = req.body;
 
+        if (!bookmarkIds || !Array.isArray(bookmarkIds) || bookmarkIds.length === 0) {
+            return res.status(400).json({ message: 'No bookmarks selected' });
+        }
+
         // Get all existing tags for the user before bulk operations
         const existingBookmarks = await Bookmark.find({ user: req.user.id });
         const existingTags = Array.from(new Set(
@@ -215,6 +219,9 @@ router.post('/bulk', protect, async (req, res) => {
 
         switch (action) {
             case 'move':
+                if (data.folderId === undefined) {
+                    return res.status(400).json({ message: 'Folder ID is required' });
+                }
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { folder: data.folderId || null } }
@@ -222,14 +229,20 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'tag':
+                if (!data.tags || !Array.isArray(data.tags)) {
+                    return res.status(400).json({ message: 'Tags array is required' });
+                }
                 const normalizedNewTags = processTags(data.tags, existingTags);
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
-                    { $addToSet: { tags: { $each: normalizedNewTags } } }
+                    { $set: { tags: normalizedNewTags } }
                 );
                 break;
 
             case 'untag':
+                if (!data.tags || !Array.isArray(data.tags)) {
+                    return res.status(400).json({ message: 'Tags array is required' });
+                }
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $pullAll: { tags: data.tags } }
@@ -244,6 +257,9 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'favorite':
+                if (typeof data.isFavorite !== 'boolean') {
+                    return res.status(400).json({ message: 'Favorite status is required' });
+                }
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { isFavorite: data.isFavorite } }
@@ -251,6 +267,9 @@ router.post('/bulk', protect, async (req, res) => {
                 break;
 
             case 'category':
+                if (!data.category) {
+                    return res.status(400).json({ message: 'Category is required' });
+                }
                 await Bookmark.updateMany(
                     { _id: { $in: bookmarkIds }, user: req.user.id },
                     { $set: { category: data.category } }

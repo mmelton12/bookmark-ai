@@ -27,6 +27,9 @@ import { useFolder } from '../../contexts/FolderContext';
 import FolderManager from '../folders/FolderManager';
 import BookmarkList from './BookmarkList';
 import { useSearch } from '../../contexts/SearchContext';
+import MoveDialog from './MoveDialog';
+import TagDialog from './TagDialog';
+import CategoryDialog from './CategoryDialog';
 
 // Add FolderDrawer component
 const FolderDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
@@ -155,6 +158,27 @@ const BookmarkManager: React.FC = () => {
       <FolderDrawer 
         isOpen={isFolderDrawerOpen} 
         onClose={onFolderDrawerClose}
+      />
+
+      <MoveDialog
+        isOpen={isMoveDialogOpen}
+        onClose={() => setIsMoveDialogOpen(false)}
+        bookmarkIds={selectedBookmarkIds}
+        onComplete={handleOperationComplete}
+      />
+
+      <TagDialog
+        isOpen={isTagDialogOpen}
+        onClose={() => setIsTagDialogOpen(false)}
+        bookmarkIds={selectedBookmarkIds}
+        onComplete={handleOperationComplete}
+      />
+
+      <CategoryDialog
+        isOpen={isCategoryDialogOpen}
+        onClose={() => setIsCategoryDialogOpen(false)}
+        bookmarkIds={selectedBookmarkIds}
+        onComplete={handleOperationComplete}
       />
     </Grid>
   );

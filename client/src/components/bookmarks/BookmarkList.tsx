@@ -27,6 +27,7 @@ import {
 import { useFolder } from '../../contexts/FolderContext';
 import { bookmarkAPI } from '../../services/api';
 import { Bookmark, PaginatedResponse } from '../../types';
+import BookmarkCard from './BookmarkCard';
 
 interface BookmarkListProps {
   onMove: (bookmarkIds: string[]) => void;
@@ -158,19 +159,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     }
   };
 
-  const getCategoryColor = (category: 'Article' | 'Video' | 'Research'): string => {
-    switch (category) {
-      case 'Article':
-        return 'purple';
-      case 'Video':
-        return 'red';
-      case 'Research':
-        return 'green';
-      default:
-        return 'gray';
-    }
-  };
-
   if (loading && page === 1) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" p={4}>
@@ -240,14 +228,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
 
       <VStack spacing={2} align="stretch">
         {bookmarks.map((bookmark) => (
-          <Box
-            key={bookmark._id}
-            p={4}
-            borderWidth="1px"
-            borderRadius="md"
-            bg={bgColor}
-            borderColor={borderColor}
-          >
+          <Box key={bookmark._id}>
             <HStack align="flex-start">
               <Checkbox
                 isChecked={selectedBookmarks.includes(bookmark._id)}
@@ -255,88 +236,15 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
                 mt={1}
               />
               <Box flex={1}>
-                <HStack justify="space-between" mb={2}>
-                  <Text fontWeight="bold" fontSize="lg">
-                    <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
-                      {bookmark.title}
-                    </a>
-                  </Text>
-                  <HStack>
-                    <IconButton
-                      aria-label={bookmark.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                      icon={bookmark.isFavorite ? <FaStar /> : <FaRegStar />}
-                      color={bookmark.isFavorite ? 'yellow.400' : 'gray.400'}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleFavorite(bookmark._id)}
-                    />
-                    <Menu>
-                      <MenuButton
-                        as={IconButton}
-                        aria-label="Options"
-                        icon={<FaEllipsisV />}
-                        variant="ghost"
-                        size="sm"
-                      />
-                      <MenuList>
-                        <MenuItem
-                          icon={<FaFolderOpen />}
-                          onClick={() => onMove([bookmark._id])}
-                        >
-                          Move
-                        </MenuItem>
-                        <MenuItem
-                          icon={<FaTag />}
-                          onClick={() => onTag([bookmark._id])}
-                        >
-                          Edit Tags
-                        </MenuItem>
-                        <MenuItem
-                          icon={<FaBookmark />}
-                          onClick={() => onCategory([bookmark._id])}
-                        >
-                          Change Category
-                        </MenuItem>
-                        <MenuItem
-                          icon={<FaTrash />}
-                          onClick={() => handleDelete(bookmark._id)}
-                        >
-                          Delete
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
-                  </HStack>
-                </HStack>
-                <Text color="blue.500" mb={2}>
-                  <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
-                    {bookmark.url}
-                  </a>
-                </Text>
-                <Text mb={3}>{bookmark.aiSummary || bookmark.description}</Text>
-                <HStack spacing={2} wrap="wrap">
-                  {bookmark.category && (
-                    <Tag 
-                      size="sm" 
-                      colorScheme={getCategoryColor(bookmark.category)}
-                      variant="solid"
-                      mr={2}
-                    >
-                      {bookmark.category}
-                    </Tag>
-                  )}
-                  {bookmark.tags.map((tag) => (
-                    <Tag 
-                      key={tag} 
-                      size="sm" 
-                      cursor="pointer"
-                      colorScheme="blue"
-                      variant="subtle"
-                      onClick={() => onTagClick?.(tag)}
-                    >
-                      {tag}
-                    </Tag>
-                  ))}
-                </HStack>
+                <BookmarkCard
+                  bookmark={bookmark}
+                  onDelete={handleDelete}
+                  onTagClick={onTagClick || (() => {})}
+                  onToggleFavorite={handleToggleFavorite}
+                  onMove={onMove}
+                  onTag={onTag}
+                  onCategory={onCategory}
+                />
               </Box>
             </HStack>
           </Box>

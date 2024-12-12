@@ -12,9 +12,13 @@ import {
   Alert,
   AlertIcon,
   useColorModeValue,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import { DeleteIcon, ExternalLinkIcon } from '@chakra-ui/icons';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaEllipsisV, FaFolderOpen, FaTag, FaBookmark } from 'react-icons/fa';
 import { Bookmark } from '../../types';
 
 interface BookmarkCardProps {
@@ -22,9 +26,20 @@ interface BookmarkCardProps {
   onDelete: (id: string) => Promise<void>;
   onTagClick: (tag: string) => void;
   onToggleFavorite: (id: string, isFavorite: boolean) => Promise<void>;
+  onMove: (bookmarkIds: string[]) => void;
+  onTag: (bookmarkIds: string[]) => void;
+  onCategory: (bookmarkIds: string[]) => void;
 }
 
-const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagClick, onToggleFavorite }) => {
+const BookmarkCard: React.FC<BookmarkCardProps> = ({ 
+  bookmark, 
+  onDelete, 
+  onTagClick, 
+  onToggleFavorite,
+  onMove,
+  onTag,
+  onCategory
+}) => {
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -93,14 +108,41 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({ bookmark, onDelete, onTagCl
               onClick={handleToggleFavorite}
               color={starColor}
             />
-            <IconButton
-              aria-label="Delete bookmark"
-              icon={<DeleteIcon />}
-              size="sm"
-              colorScheme="red"
-              variant="ghost"
-              onClick={handleDelete}
-            />
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                aria-label="Options"
+                icon={<FaEllipsisV />}
+                variant="ghost"
+                size="sm"
+              />
+              <MenuList>
+                <MenuItem
+                  icon={<FaFolderOpen />}
+                  onClick={() => onMove([bookmark._id])}
+                >
+                  Move
+                </MenuItem>
+                <MenuItem
+                  icon={<FaTag />}
+                  onClick={() => onTag([bookmark._id])}
+                >
+                  Edit Tags
+                </MenuItem>
+                <MenuItem
+                  icon={<FaBookmark />}
+                  onClick={() => onCategory([bookmark._id])}
+                >
+                  Change Category
+                </MenuItem>
+                <MenuItem
+                  icon={<DeleteIcon />}
+                  onClick={handleDelete}
+                >
+                  Delete
+                </MenuItem>
+              </MenuList>
+            </Menu>
           </HStack>
         </HStack>
 
