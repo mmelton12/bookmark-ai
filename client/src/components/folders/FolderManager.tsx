@@ -59,6 +59,7 @@ const FolderManager: React.FC = () => {
       height="100%"
       spacing={4}
       align="stretch"
+      p={4}
     >
       <Box
         bg={bgColor}

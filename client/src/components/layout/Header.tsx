@@ -129,9 +129,11 @@ const Header: React.FC = () => {
       bg={bgColor}
       borderBottom="1px"
       borderColor="chakra-border-color"
-      position="sticky"
+      position="fixed"
       top={0}
-      zIndex={10}
+      left={0}
+      right={0}
+      zIndex={1000}
       shadow="sm"
     >
       <Container maxW="container.xl">

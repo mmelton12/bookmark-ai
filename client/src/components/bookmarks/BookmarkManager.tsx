@@ -105,17 +105,28 @@ const BookmarkManager: React.FC = () => {
   }, [onFolderDrawerOpen]);
 
   return (
-    <Grid
-      templateColumns={{ base: "1fr", md: "300px 1fr" }}
-      gap={4}
-      height="100%"
-    >
-      <GridItem display={{ base: 'none', md: 'block' }}>
-        <VStack spacing={4} align="stretch">
-          <FolderManager />
-        </VStack>
-      </GridItem>
-      <GridItem>
+    <Box display="flex" height="100%" pt="73px">
+      <Box
+        width="300px"
+        display={{ base: 'none', md: 'block' }}
+        position="fixed"
+        left={0}
+        top="73px"
+        bottom={0}
+        overflowY="auto"
+        borderRight="1px"
+        borderColor="gray.200"
+        bg={useColorModeValue('white', 'gray.800')}
+      >
+        <FolderManager />
+      </Box>
+
+      <Box
+        flex={1}
+        ml={{ base: 0, md: '300px' }}
+        p={4}
+        pt={6}
+      >
         <VStack spacing={4} align="stretch">
           <Tabs variant="soft-rounded" colorScheme="blue" mb={4}>
             <TabList>
@@ -153,7 +164,7 @@ const BookmarkManager: React.FC = () => {
             key={refreshTrigger} // Force refresh when trigger changes
           />
         </VStack>
-      </GridItem>
+      </Box>
 
       <FolderDrawer 
         isOpen={isFolderDrawerOpen} 
@@ -180,7 +191,7 @@ const BookmarkManager: React.FC = () => {
         bookmarkIds={selectedBookmarkIds}
         onComplete={handleOperationComplete}
       />
-    </Grid>
+    </Box>
   );
 };
 
