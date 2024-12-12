@@ -168,7 +168,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   }
 
   return (
-    <VStack spacing={4} align="stretch">
+    <VStack spacing={4} align="stretch" className="bookmark-list" pb={8}>
       {selectedBookmarks.length > 0 && (
         <HStack spacing={2} p={4}>
           <Button
@@ -210,7 +210,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         </HStack>
       )}
 
-      <VStack spacing={2} align="stretch">
+      <VStack spacing={5} align="stretch">
         {bookmarks.map((bookmark) => (
           <Box key={bookmark._id}>
             <BookmarkCard
