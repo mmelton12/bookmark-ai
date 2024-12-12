@@ -4,24 +4,14 @@ import {
   VStack,
   HStack,
   Text,
-  IconButton,
-  Checkbox,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
   Button,
-  Tag,
   Spinner,
   useColorModeValue,
 } from '@chakra-ui/react';
 import {
-  FaEllipsisV,
+  FaTrash,
   FaFolderOpen,
   FaTag,
-  FaTrash,
-  FaStar,
-  FaRegStar,
   FaBookmark,
 } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
@@ -57,10 +47,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Color mode values
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-
   const fetchBookmarks = useCallback(async (pageNum: number) => {
     try {
       setLoadingMore(pageNum > 1);
@@ -74,7 +60,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
         folderId: selectedFolder !== 'favorites' ? selectedFolder : undefined
       };
 
-      // Always use search endpoint to handle all filters including favorites
       response = await bookmarkAPI.search(searchParams, pageNum);
       
       if (pageNum === 1) {
@@ -97,7 +82,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     fetchBookmarks(1);
   }, [fetchBookmarks]);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setPage(1);
     setHasMore(true);
@@ -229,24 +213,17 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       <VStack spacing={2} align="stretch">
         {bookmarks.map((bookmark) => (
           <Box key={bookmark._id}>
-            <HStack align="flex-start">
-              <Checkbox
-                isChecked={selectedBookmarks.includes(bookmark._id)}
-                onChange={() => handleCheckboxChange(bookmark._id)}
-                mt={1}
-              />
-              <Box flex={1}>
-                <BookmarkCard
-                  bookmark={bookmark}
-                  onDelete={handleDelete}
-                  onTagClick={onTagClick || (() => {})}
-                  onToggleFavorite={handleToggleFavorite}
-                  onMove={onMove}
-                  onTag={onTag}
-                  onCategory={onCategory}
-                />
-              </Box>
-            </HStack>
+            <BookmarkCard
+              bookmark={bookmark}
+              onDelete={handleDelete}
+              onTagClick={onTagClick || (() => {})}
+              onToggleFavorite={handleToggleFavorite}
+              onMove={onMove}
+              onTag={onTag}
+              onCategory={onCategory}
+              isSelected={selectedBookmarks.includes(bookmark._id)}
+              onSelect={handleCheckboxChange}
+            />
           </Box>
         ))}
       </VStack>

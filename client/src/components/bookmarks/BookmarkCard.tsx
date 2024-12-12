@@ -18,6 +18,8 @@ interface BookmarkCardProps {
   onMove: (bookmarkIds: string[]) => void;
   onTag: (bookmarkIds: string[]) => void;
   onCategory: (bookmarkIds: string[]) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 const BookmarkCard: React.FC<BookmarkCardProps> = ({
@@ -27,7 +29,9 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
   onToggleFavorite,
   onMove,
   onTag,
-  onCategory
+  onCategory,
+  isSelected,
+  onSelect
 }) => {
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -81,6 +85,8 @@ const BookmarkCard: React.FC<BookmarkCardProps> = ({
           onMove={onMove}
           onTag={onTag}
           onCategory={onCategory}
+          isSelected={isSelected}
+          onSelect={onSelect}
         />
         <BookmarkCardContent bookmark={bookmark} />
         <BookmarkCardFooter

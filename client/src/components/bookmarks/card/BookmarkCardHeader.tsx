@@ -3,10 +3,12 @@ import {
   HStack,
   Heading,
   IconButton,
+  Checkbox,
+  Box,
 } from '@chakra-ui/react';
 import { FaStar } from 'react-icons/fa';
 import { Bookmark } from '../../../types';
-import BookmarkCardMenu from './BookmarkCardMenu';
+import BookmarkCardMenu from '../card/BookmarkCardMenu';
 
 interface BookmarkCardHeaderProps {
   bookmark: Bookmark;
@@ -15,6 +17,8 @@ interface BookmarkCardHeaderProps {
   onMove: (bookmarkIds: string[]) => void;
   onTag: (bookmarkIds: string[]) => void;
   onCategory: (bookmarkIds: string[]) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
 const BookmarkCardHeader: React.FC<BookmarkCardHeaderProps> = ({
@@ -23,15 +27,26 @@ const BookmarkCardHeader: React.FC<BookmarkCardHeaderProps> = ({
   onDelete,
   onMove,
   onTag,
-  onCategory
+  onCategory,
+  isSelected = false,
+  onSelect
 }) => {
   const starColor = bookmark.isFavorite ? 'yellow.400' : 'gray.300';
 
   return (
-    <HStack justify="space-between" align="flex-start">
-      <Heading size="md" noOfLines={2}>
-        {bookmark.title || bookmark.url}
-      </Heading>
+    <HStack justify="space-between" align="flex-start" width="100%">
+      <HStack flex={1}>
+        {onSelect && (
+          <Checkbox
+            isChecked={isSelected}
+            onChange={() => onSelect(bookmark._id)}
+            mr={2}
+          />
+        )}
+        <Heading size="md" noOfLines={2}>
+          {bookmark.title || bookmark.url}
+        </Heading>
+      </HStack>
       <HStack>
         <IconButton
           aria-label={bookmark.isFavorite ? "Remove from favorites" : "Add to favorites"}
