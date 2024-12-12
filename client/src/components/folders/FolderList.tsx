@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   List,
@@ -41,44 +41,49 @@ const FolderItem: React.FC<FolderItemProps> = ({ folder, level, onEdit, onDelete
   const bgColor = useColorModeValue('gray.50', 'gray.700');
   const selectedBgColor = useColorModeValue('blue.50', 'blue.900');
   const dropTargetBg = useColorModeValue('blue.100', 'blue.800');
+  const dropTargetBorder = useColorModeValue('blue.500', 'blue.300');
   const toast = useToast();
-  const [isDropTarget, setIsDropTarget] = React.useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!isDropTarget) {
       setIsDropTarget(true);
     }
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsDropTarget(false);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDropTarget(false);
-    const bookmarkId = e.dataTransfer.getData('bookmarkId');
     
-    if (bookmarkId) {
-      try {
-        await moveBookmarkToFolder(bookmarkId, folder._id);
-        toast({
-          title: 'Bookmark moved',
-          description: `Successfully moved to ${folder.name}`,
-          status: 'success',
-          duration: 2000,
-          isClosable: true,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error moving bookmark',
-          description: error instanceof Error ? error.message : 'Failed to move bookmark',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
+    const bookmarkId = e.dataTransfer.getData('bookmarkId');
+    if (!bookmarkId) return;
+    
+    try {
+      await moveBookmarkToFolder(bookmarkId, folder._id);
+      toast({
+        title: 'Bookmark moved',
+        description: `Successfully moved to ${folder.name}`,
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error moving bookmark',
+        description: error instanceof Error ? error.message : 'Failed to move bookmark',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -96,12 +101,20 @@ const FolderItem: React.FC<FolderItemProps> = ({ folder, level, onEdit, onDelete
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      transition="background-color 0.2s"
+      transition="all 0.2s"
+      border="2px solid transparent"
+      borderColor={isDropTarget ? dropTargetBorder : 'transparent'}
+      borderRadius="md"
+      transform={isDropTarget ? 'scale(1.02)' : 'scale(1)'}
+      position="relative"
+      zIndex={isDropTarget ? 2 : 1}
     >
       <Icon
         as={FaFolder}
         color={folder.color || 'gray.500'}
         mr={2}
+        transform={isDropTarget ? 'scale(1.1)' : 'scale(1)'}
+        transition="transform 0.2s"
       />
       <Box flex={1}>
         <Box display="flex" alignItems="center">
@@ -251,6 +264,21 @@ interface FolderListProps {
 
 const FolderList: React.FC<FolderListProps> = ({ onEdit, onDelete }) => {
   const { folders, loading, error } = useFolder();
+  const [isDraggingBookmark, setIsDraggingBookmark] = useState(false);
+  const borderColor = useColorModeValue('blue.200', 'blue.600');
+
+  useEffect(() => {
+    const handleDragStart = () => setIsDraggingBookmark(true);
+    const handleDragEnd = () => setIsDraggingBookmark(false);
+
+    document.addEventListener('bookmarkDragStart', handleDragStart);
+    document.addEventListener('bookmarkDragEnd', handleDragEnd);
+
+    return () => {
+      document.removeEventListener('bookmarkDragStart', handleDragStart);
+      document.removeEventListener('bookmarkDragEnd', handleDragEnd);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -269,17 +297,25 @@ const FolderList: React.FC<FolderListProps> = ({ onEdit, onDelete }) => {
   }
 
   return (
-    <List spacing={1}>
-      <AllBookmarksItem />
-      <FavoritesItem />
-      {folders.length === 0 ? (
-        <Box p={4}>
-          <Text color="gray.500">No folders yet</Text>
-        </Box>
-      ) : (
-        renderFolderTree(folders, 0, onEdit, onDelete)
-      )}
-    </List>
+    <Box
+      border="2px dashed transparent"
+      borderColor={isDraggingBookmark ? borderColor : 'transparent'}
+      borderRadius="lg"
+      transition="all 0.2s"
+      p={2}
+    >
+      <List spacing={1}>
+        <AllBookmarksItem />
+        <FavoritesItem />
+        {folders.length === 0 ? (
+          <Box p={4}>
+            <Text color="gray.500">No folders yet</Text>
+          </Box>
+        ) : (
+          renderFolderTree(folders, 0, onEdit, onDelete)
+        )}
+      </List>
+    </Box>
   );
 };
 
