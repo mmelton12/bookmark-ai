@@ -13,18 +13,15 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
+    passport.authenticate('google', { session: false }),
     async (req, res) => {
         try {
-            // Get full user data including API keys
-            const user = await User.findById(req.user.id).select('+openAiKey +claudeKey');
+            // Token is now generated in passport strategy
+            const token = req.user.token;
             
-            // Create JWT token
-            const token = jwt.sign(
-                { id: user.id },
-                process.env.JWT_SECRET,
-                { expiresIn: '30d' }
-            );
+            if (!token) {
+                throw new Error('Authentication failed - no token generated');
+            }
 
             // Redirect to frontend with token
             res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
@@ -64,8 +61,8 @@ router.post('/signup', [
         user = new User({
             email,
             password,
-            aiProvider: 'openai', // Default to OpenAI
-            hasCompletedTour: false // Initialize tour status
+            aiProvider: 'openai',
+            hasCompletedTour: false
         });
 
         // Save user
@@ -78,7 +75,7 @@ router.post('/signup', [
         const token = jwt.sign(
             { id: user.id },
             process.env.JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: process.env.JWT_EXPIRE || '30d' }
         );
 
         res.status(201).json({
@@ -138,7 +135,7 @@ router.post('/login', [
         const token = jwt.sign(
             { id: user.id },
             process.env.JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: process.env.JWT_EXPIRE || '30d' }
         );
 
         res.json({
@@ -167,17 +164,8 @@ router.post('/login', [
 // @desc    Logout user / Clear credentials
 // @access  Public
 router.post('/logout', (req, res) => {
-    // Clear any session data if it exists
-    if (req.session) {
-        req.session.destroy();
-    }
-    
-    // Clear passport session
-    req.logout(() => {
-        // Send back Clear-Site-Data header to clear all client-side storage
-        res.set('Clear-Site-Data', '"cookies", "storage"');
-        res.status(200).json({ message: 'Logged out successfully' });
-    });
+    res.set('Clear-Site-Data', '"cookies", "storage"');
+    res.status(200).json({ message: 'Logged out successfully' });
 });
 
 // @route   GET /api/auth/user
@@ -185,8 +173,12 @@ router.post('/logout', (req, res) => {
 // @access  Private
 router.get('/user', protect, async (req, res) => {
     try {
-        // Explicitly select API key fields
         const user = await User.findById(req.user.id).select('-password +openAiKey +claudeKey');
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
         res.json(user);
     } catch (error) {
         console.error(error);
@@ -221,7 +213,6 @@ router.put('/profile', protect, [
         if (claudeKey !== undefined) updateFields.claudeKey = claudeKey;
         if (hasCompletedTour !== undefined) updateFields.hasCompletedTour = hasCompletedTour;
         if (aiProvider) {
-            // Validate that the user has the required API key for the selected provider
             if (aiProvider === 'openai' && !openAiKey && !req.user.openAiKey) {
                 return res.status(400).json({
                     message: 'OpenAI API key is required when selecting OpenAI as provider'
@@ -236,7 +227,6 @@ router.put('/profile', protect, [
         }
 
         if (email) {
-            // Check if email is already taken by another user
             const existingUser = await User.findOne({ email });
             if (existingUser && existingUser._id.toString() !== req.user.id) {
                 return res.status(400).json({
@@ -284,7 +274,6 @@ router.put('/password', protect, [
 
         const { currentPassword, newPassword } = req.body;
 
-        // Get user with password
         const user = await User.findById(req.user.id).select('+password');
         if (!user) {
             return res.status(404).json({
@@ -292,7 +281,6 @@ router.put('/password', protect, [
             });
         }
 
-        // Check current password
         const isMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) {
             return res.status(400).json({
@@ -300,7 +288,6 @@ router.put('/password', protect, [
             });
         }
 
-        // Update password
         user.password = newPassword;
         await user.save();
 
