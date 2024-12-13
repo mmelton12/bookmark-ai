@@ -1,7 +1,7 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { User, AuthResponse, UserUpdateInput, Bookmark, PaginatedResponse, TagCount, BookmarkStats, SearchParams } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001';
+const API_URL = process.env.REACT_APP_API_URL || 'https://api.mattymeltz.com';
 
 // Configure axios
 axios.defaults.withCredentials = true;
