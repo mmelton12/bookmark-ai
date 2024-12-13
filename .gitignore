@@ -52,3 +52,4 @@ client/coverage/
 # Misc
 .DS_Store
 Thumbs.db
+.vercel
