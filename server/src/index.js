@@ -4,6 +4,9 @@ const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
 const connectDB = require('./config/database');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 // Import passport config
 require('./config/passport');
@@ -20,6 +23,12 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+// SSL configuration
+const sslOptions = {
+    key: fs.readFileSync(path.join(__dirname, '../ssl/server.key')),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/server.crt'))
+};
+
 // Middleware
 app.use(cors({
     origin: process.env.CLIENT_URL,
@@ -34,7 +43,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure cookies with HTTPS
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -64,10 +73,13 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Create HTTPS server
+const httpsServer = https.createServer(sslOptions, app);
+
 // Start server
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+httpsServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`HTTPS Server is running on port ${PORT}`);
     console.log(`Server URL: ${process.env.SERVER_URL}`);
     console.log(`Client URL: ${process.env.CLIENT_URL}`);
 });

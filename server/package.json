@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "AI-powered bookmark manager backend",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
@@ -13,7 +16,6 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
-    "@types/react-joyride": "^2.0.2",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
@@ -26,10 +28,7 @@
     "mongoose": "^8.8.4",
     "openai": "^3.3.0",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0",
-    "react-joyride": "^2.9.3",
-    "string-similarity": "^4.0.4",
-    "youtube-transcript": "^1.2.1"
+    "passport-google-oauth20": "^2.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

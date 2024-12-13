@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, AuthResponse, UserUpdateInput, Bookmark, PaginatedResponse, TagCount, BookmarkStats, SearchParams } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://localhost:5001/api';
 
 // Configure axios
 axios.defaults.withCredentials = true;

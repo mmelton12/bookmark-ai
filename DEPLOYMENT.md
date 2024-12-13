@@ -1,213 +1,174 @@
-# Deploying BookmarkAI to Siteground
+# Deploying BookmarkAI to Railway
 
 ## Prerequisites
 
-1. Siteground hosting account
-2. SSH access to your Siteground server
-3. Node.js enabled on your hosting (via Siteground Site Tools)
-4. MongoDB Atlas account (for database)
+1. GitHub account with your BookmarkAI repository
+2. Railway account (https://railway.app)
+3. MongoDB Atlas account (for database)
+4. Google OAuth credentials
 
 ## Deployment Steps
 
-### 1. Prepare the Application
-
-1. Update API configuration:
-   ```typescript
-   // client/src/services/api.ts
-   const API_URL = process.env.REACT_APP_API_URL || 'https://api.yourdomain.com';
-   ```
-
-2. Create production build:
-   ```bash
-   # In the client directory
-   npm run build
-   ```
-
-### 2. Set Up Node.js on Siteground
-
-1. Log in to Siteground Site Tools
-2. Go to DevOps > Node.js
-3. Create a new Node.js instance:
-   - Select Node.js version 18.x or higher (recommended: 18.16.0 LTS)
-   - Set the domain/subdomain for your API (e.g., api.yourdomain.com)
-   - Note the Node.js environment path and port number
-
-### 3. Upload Files
-
-1. Connect to Siteground via SSH or FTP
-2. Create directory structure:
-   ```
-   yourdomain.com/
-   ├── public_html/     # Frontend build files
-   └── nodeapp/         # Backend files
-   ```
-
-3. Upload files:
-   - Copy contents of `client/build/` to `public_html/`
-   - Copy contents of `server/` to `nodeapp/`
-   - Ensure `.env` and `node_modules` are not uploaded
-
-### 4. Configure Environment Variables
-
-1. Create `.env` file in your nodeapp directory:
-   ```
-   MONGODB_URI=your_mongodb_atlas_uri
-   JWT_SECRET=your_jwt_secret
-   OPENAI_API_KEY=your_openai_api_key
-   PORT=your_assigned_nodejs_port
-   NODE_ENV=production
-   CORS_ORIGIN=https://yourdomain.com
-   ```
-
-2. Set up environment variables in Siteground:
-   - Go to Site Tools > DevOps > Node.js
-   - Select your Node.js instance
-   - Add environment variables in the "Environment Variables" section
-
-### 5. Install Dependencies and Start Server
-
-```bash
-# In the nodeapp directory
-cd nodeapp
-npm install --production
-npm install pm2 -g
-pm2 start src/index.js --name bookmarkai
-```
-
-### 6. Configure Domain and SSL
-
-1. Set up main domain:
-   - Go to Site Tools > Domains > Site
-   - Point your main domain to `public_html/`
-   - Enable HTTPS (Site Tools > Security > SSL Manager)
-
-2. Set up API subdomain:
-   - Create subdomain (e.g., api.yourdomain.com)
-   - Configure reverse proxy:
-     - Go to Site Tools > Domains > Site
-     - Select your API subdomain
-     - Enable proxy and point to your Node.js port
-     - Add these proxy rules:
-       ```
-       proxy_set_header X-Real-IP $remote_addr;
-       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       proxy_set_header Host $http_host;
-       proxy_set_header X-NginX-Proxy true;
-       ```
-
-### 7. MongoDB Atlas Setup
+### 1. MongoDB Atlas Setup
 
 1. Create MongoDB Atlas cluster (M0 Free tier is sufficient to start)
 2. Create database user with read/write permissions
 3. Configure network access:
-   - Add Siteground server IP to whitelist
+   - Add `0.0.0.0/0` to whitelist for Railway access
    - For development, add your local IP
-4. Get connection string and update MONGODB_URI in .env
+4. Get connection string for Railway environment variables
 
-### 8. Frontend Configuration
+### 2. Railway Project Setup
 
-1. Create `.env.production` in client directory:
+1. Log in to Railway using GitHub account
+2. Create a new project:
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose your BookmarkAI repository
+
+3. Add MongoDB environment variable:
+   - Go to project settings
+   - Add environment variable:
+     ```
+     MONGODB_URI=your_mongodb_atlas_uri
+     ```
+
+### 3. Configure Services
+
+#### Backend Service:
+1. Add these environment variables:
    ```
-   REACT_APP_API_URL=https://api.yourdomain.com
+   NODE_ENV=production
+   JWT_SECRET=your_jwt_secret
+   JWT_EXPIRE=24h
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   CLIENT_URL=https://your-frontend-url.railway.app
+   SERVER_URL=https://your-backend-url.railway.app
    ```
 
-2. Rebuild frontend with production settings:
-   ```bash
-   cd client
-   npm run build
+2. Configure start command:
+   ```
+   cd server && npm install && npm start
    ```
 
-### 9. Post-Deployment Verification
+#### Frontend Service:
+1. Add these environment variables:
+   ```
+   REACT_APP_API_URL=https://your-backend-url.railway.app/api
+   REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
+   ```
 
-1. Test frontend:
-   - Visit https://yourdomain.com
+2. Configure start command:
+   ```
+   cd client && npm install && npm run build && npm install -g serve && serve -s build
+   ```
+
+### 4. Update Google OAuth Configuration
+
+1. Go to Google Cloud Console
+2. Update OAuth 2.0 credentials with Railway URLs:
+   
+   Authorized JavaScript Origins:
+   ```
+   https://your-frontend-url.railway.app
+   ```
+   
+   Authorized Redirect URIs:
+   ```
+   https://your-backend-url.railway.app/api/auth/google/callback
+   ```
+
+### 5. Domain Configuration (Optional)
+
+1. Add custom domain in Railway:
+   - Go to project settings
+   - Click "Add Domain"
+   - Follow DNS configuration instructions
+
+2. Update environment variables with custom domain
+3. Update Google OAuth configuration with custom domain
+
+### 6. Verify Deployment
+
+1. Check frontend:
+   - Visit your Railway frontend URL
    - Verify assets load correctly
    - Check browser console for errors
 
 2. Test API:
-   - Verify https://api.yourdomain.com/api/health returns 200
    - Test authentication endpoints
    - Test bookmark operations
+   - Verify Google OAuth flow
 
-3. Monitor logs:
-   ```bash
-   pm2 logs bookmarkai
-   ```
+### 7. Monitoring and Maintenance
 
-### 10. Common Issues & Solutions
+1. View logs in Railway dashboard:
+   - Real-time logs available
+   - Error tracking
+   - Deployment history
+
+2. Monitor usage:
+   - Check Railway dashboard for resource usage
+   - Monitor MongoDB Atlas metrics
+   - Track API response times
+
+3. Update application:
+   - Push changes to GitHub
+   - Railway automatically rebuilds and deploys
+
+### 8. Common Issues & Solutions
 
 1. CORS errors:
-   - Verify CORS_ORIGIN in backend .env
-   - Check API_URL in frontend
-   - Ensure SSL is properly configured
+   - Verify CLIENT_URL and SERVER_URL in backend env vars
+   - Check REACT_APP_API_URL in frontend env vars
+   - Ensure all URLs use https://
 
-2. 502 Bad Gateway:
-   - Check pm2 process status: `pm2 list`
-   - Verify Node.js port configuration
-   - Check proxy settings in Siteground
+2. Build failures:
+   - Check Railway build logs
+   - Verify start commands
+   - Check for missing dependencies
 
 3. Database connection issues:
    - Verify MongoDB Atlas IP whitelist
    - Check MONGODB_URI format
-   - Test connection with MongoDB Compass
+   - Ensure MongoDB Atlas cluster is active
 
-4. Static file issues:
-   - Verify build files in public_html
-   - Check file permissions (should be 644)
-   - Clear browser cache
+4. OAuth issues:
+   - Verify Google OAuth credentials
+   - Check authorized origins and redirect URIs
+   - Ensure all URLs match Railway domains
 
-### 11. Maintenance
+### 9. Scaling Considerations
 
-1. Update application:
-   ```bash
-   # Pull latest changes
-   git pull origin main
+1. Railway Hobby Plan ($5/month) includes:
+   - 8 GB RAM / 8 vCPU per service
+   - Sufficient for moderate traffic
+   - US regions
 
-   # Update backend
-   cd nodeapp
-   npm install --production
-   pm2 restart bookmarkai
+2. MongoDB Atlas scaling:
+   - Start with M0 Free tier
+   - Upgrade based on usage
+   - Monitor performance metrics
 
-   # Update frontend
-   cd ../client
-   npm install
-   npm run build
-   # Copy build files to public_html
-   ```
+3. Performance optimization:
+   - Enable MongoDB indexes
+   - Implement caching if needed
+   - Monitor API response times
 
-2. Monitor performance:
-   ```bash
-   pm2 monit
-   ```
+### 10. Security Best Practices
 
-3. View logs:
-   ```bash
-   pm2 logs bookmarkai
-   ```
+1. Environment variables:
+   - Use Railway's environment variable management
+   - Never commit sensitive data to Git
+   - Regularly rotate secrets
 
-4. Backup database:
-   - Use MongoDB Atlas automated backups
-   - Schedule regular backups via Atlas UI
+2. MongoDB security:
+   - Use strong database passwords
+   - Regular security audits
+   - Enable MongoDB Atlas security features
 
-5. Security maintenance:
-   - Regularly update Node.js version
+3. Application security:
    - Keep dependencies updated
-   - Monitor Siteground security notifications
-   - Regularly rotate JWT_SECRET
-
-### 12. Performance Optimization
-
-1. Enable Siteground caching:
-   - Go to Site Tools > Speed > Caching
-   - Enable Dynamic Caching
-   - Configure browser caching
-
-2. Configure PM2:
-   ```bash
-   pm2 start src/index.js --name bookmarkai -i max
-   ```
-
-3. Monitor and adjust:
-   - Use Siteground Site Tools > Statistics
-   - Monitor PM2 metrics
-   - Adjust MongoDB Atlas tier if needed
+   - Regular security patches
+   - Implement rate limiting if needed
