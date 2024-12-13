@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/logo-bookmarkai.svg",
+      "dest": "/logo-bookmarkai.svg"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://server-bookmarkai.vercel.app/api",
+    "REACT_APP_ENV": "production",
+    "REACT_APP_GOOGLE_CLIENT_ID": "18806474710-hntqiv1r5ltdi6i770r73hp69012f3ea.apps.googleusercontent.com"
+  }
+}
