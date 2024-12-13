@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { cleanUrl } = require('./urlCleaner');
-const { YoutubeTranscript } = require('youtube-transcript');
+const YoutubeTranscript = require('youtube-transcript');
 
 const isYouTubeUrl = (url) => {
     try {
