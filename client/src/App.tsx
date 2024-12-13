@@ -6,6 +6,7 @@ import { FolderProvider } from './contexts/FolderContext';
 import LoginForm from './components/auth/LoginForm';
 import SignupForm from './components/auth/SignupForm';
 import BookmarkManager from './components/bookmarks/BookmarkManager';
+import ShareTarget from './components/bookmarks/ShareTarget';
 import AccountSettings from './components/account/AccountSettings';
 import ChatPage from './components/chat/ChatPage';
 import FloatingChatBot from './components/chat/FloatingChatBot';
@@ -18,6 +19,7 @@ import Terms from './components/pages/Terms';
 import Contact from './components/pages/Contact';
 import CookieConsent from './components/common/CookieConsent';
 import TourGuide from './components/common/TourGuide';
+import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import theme from './theme';
 
 // Public layout wrapper component
@@ -208,10 +210,21 @@ const AppRoutes: React.FC = () => {
           }
         />
         
+        {/* Share Target Route */}
+        <Route
+          path="/share-target"
+          element={
+            <ProtectedRoute>
+              <ShareTarget />
+            </ProtectedRoute>
+          }
+        />
+        
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <CookieConsent />
+      <PWAInstallPrompt />
     </>
   );
 };
