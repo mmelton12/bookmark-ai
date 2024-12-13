@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   IconButton,
@@ -7,9 +7,19 @@ import {
 import { ChatIcon, CloseIcon } from '@chakra-ui/icons';
 import ChatBot from './ChatBot';
 
-const FloatingChatBot: React.FC = () => {
+interface FloatingChatBotProps {
+  className?: string;
+}
+
+const FloatingChatBot: React.FC<FloatingChatBotProps> = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const bgColor = useColorModeValue('white', 'gray.800');
+
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener('openChatBot', handleOpenChat);
+    return () => window.removeEventListener('openChatBot', handleOpenChat);
+  }, []);
 
   return (
     <Box
@@ -17,6 +27,7 @@ const FloatingChatBot: React.FC = () => {
       bottom="20px"
       right="20px"
       zIndex={1000}
+      className={`chat-bot ${className || ''}`}
     >
       {isOpen ? (
         <Box

@@ -2,13 +2,11 @@ import React from 'react';
 import { ChakraProvider, Box } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { SearchProvider } from './contexts/SearchContext';
 import { FolderProvider } from './contexts/FolderContext';
 import LoginForm from './components/auth/LoginForm';
 import SignupForm from './components/auth/SignupForm';
 import BookmarkManager from './components/bookmarks/BookmarkManager';
 import AccountSettings from './components/account/AccountSettings';
-import SearchPage from './components/search/SearchPage';
 import ChatPage from './components/chat/ChatPage';
 import FloatingChatBot from './components/chat/FloatingChatBot';
 import Header from './components/layout/Header';
@@ -19,6 +17,7 @@ import Privacy from './components/pages/Privacy';
 import Terms from './components/pages/Terms';
 import Contact from './components/pages/Contact';
 import CookieConsent from './components/common/CookieConsent';
+import TourGuide from './components/common/TourGuide';
 import theme from './theme';
 
 // Public layout wrapper component
@@ -34,7 +33,7 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 };
 
 // Protected route wrapper component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode, showTour?: boolean }> = ({ children, showTour = false }) => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -43,12 +42,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   return (
-    <SearchProvider>
-      <FolderProvider>
-        <Header />
-        {children}
-      </FolderProvider>
-    </SearchProvider>
+    <FolderProvider>
+      <Header />
+      {children}
+      {showTour && <TourGuide />}
+      <FloatingChatBot className="chat-bot" />
+    </FolderProvider>
   );
 };
 
@@ -183,18 +182,10 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute showTour={true}>
               <Box p={4} height="calc(100vh - 64px)">
                 <BookmarkManager />
               </Box>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            <ProtectedRoute>
-              <SearchPage />
             </ProtectedRoute>
           }
         />
@@ -220,7 +211,6 @@ const AppRoutes: React.FC = () => {
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-      {isAuthenticated && <FloatingChatBot />}
       <CookieConsent />
     </>
   );

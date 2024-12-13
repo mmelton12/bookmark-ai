@@ -61,6 +61,10 @@ const Header: React.FC = () => {
     navigate('/');
   };
 
+  const handleOpenChat = () => {
+    window.dispatchEvent(new Event('openChatBot'));
+  };
+
   const handleAddBookmark = async () => {
     if (!newBookmarkUrl.trim()) {
       setError('Please enter a URL');
@@ -171,7 +175,8 @@ const Header: React.FC = () => {
                   variant="ghost"
                   mr={2}
                   leftIcon={<SearchIcon />}
-                  onClick={() => navigate('/search')}
+                  onClick={handleOpenChat}
+                  className="search-bar"
                 >
                   Search
                 </Button>
@@ -180,6 +185,7 @@ const Header: React.FC = () => {
                   mr={2}
                   leftIcon={<AddIcon />}
                   onClick={onOpen}
+                  className="add-bookmark"
                 >
                   Add Bookmark
                 </Button>
@@ -211,6 +217,7 @@ const Header: React.FC = () => {
                     name={user?.name || user?.email}
                     src={getAvatarSrc()}
                     cursor="pointer"
+                    className="account-settings"
                   />
                 </MenuButton>
                 <MenuList>
@@ -253,7 +260,7 @@ const Header: React.FC = () => {
                 {user ? (
                   <>
                     <MenuItem onClick={handleDashboardClick}>Dashboard</MenuItem>
-                    <MenuItem onClick={() => navigate('/search')}>Search</MenuItem>
+                    <MenuItem onClick={handleOpenChat}>Search</MenuItem>
                     <MenuItem onClick={onOpen}>Add Bookmark</MenuItem>
                     <MenuItem icon={<FaFolder />} onClick={handleOpenFolders}>Folders</MenuItem>
                     <MenuItem onClick={() => navigate('/account')}>Account Settings</MenuItem>

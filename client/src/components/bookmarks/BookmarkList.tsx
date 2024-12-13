@@ -23,7 +23,6 @@ interface BookmarkListProps {
   onMove: (bookmarkIds: string[]) => void;
   onTag: (bookmarkIds: string[]) => void;
   onCategory: (bookmarkIds: string[]) => void;
-  searchQuery?: string;
   selectedTag?: string | null;
   selectedCategory?: 'Article' | 'Video' | 'Research' | null;
   onTagClick?: (tag: string) => void;
@@ -33,7 +32,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
   onMove, 
   onTag,
   onCategory,
-  searchQuery = '', 
   selectedTag = null,
   selectedCategory = undefined,
   onTagClick
@@ -53,7 +51,6 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       let response: PaginatedResponse<Bookmark>;
       
       const searchParams = {
-        query: searchQuery,
         tags: selectedTag ? [selectedTag] : [],
         category: selectedCategory,
         favorite: selectedFolder === 'favorites' ? true : undefined,
@@ -76,7 +73,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
+  }, [selectedFolder, selectedTag, selectedCategory]);
 
   useEffect(() => {
     fetchBookmarks(1);
@@ -86,7 +83,7 @@ const BookmarkList: React.FC<BookmarkListProps> = ({
     setPage(1);
     setHasMore(true);
     setBookmarks([]);
-  }, [selectedFolder, searchQuery, selectedTag, selectedCategory]);
+  }, [selectedFolder, selectedTag, selectedCategory]);
 
   const handleCheckboxChange = (bookmarkId: string) => {
     setSelectedBookmarks(prev => {

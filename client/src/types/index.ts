@@ -7,6 +7,7 @@ export interface User {
   openAiKey?: string;
   claudeKey?: string;
   aiProvider?: 'openai' | 'claude';
+  hasCompletedTour: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -99,6 +100,7 @@ export interface UserUpdateInput {
   openAiKey?: string;
   claudeKey?: string;
   aiProvider?: 'openai' | 'claude';
+  hasCompletedTour?: boolean;
 }
 
 export interface PasswordUpdateInput {

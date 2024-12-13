@@ -26,7 +26,6 @@ import { FaPlus } from 'react-icons/fa';
 import { useFolder } from '../../contexts/FolderContext';
 import FolderManager from '../folders/FolderManager';
 import BookmarkList from './BookmarkList';
-import { useSearch } from '../../contexts/SearchContext';
 import MoveDialog from './MoveDialog';
 import TagDialog from './TagDialog';
 import CategoryDialog from './CategoryDialog';
@@ -55,7 +54,6 @@ const BookmarkManager: React.FC = () => {
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const { searchQuery } = useSearch();
   const { isOpen: isFolderDrawerOpen, onOpen: onFolderDrawerOpen, onClose: onFolderDrawerClose } = useDisclosure();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -117,6 +115,7 @@ const BookmarkManager: React.FC = () => {
         borderRight="1px"
         borderColor="gray.200"
         bg={useColorModeValue('white', 'gray.800')}
+        className="folder-list"
       >
         <FolderManager />
       </Box>
@@ -126,6 +125,7 @@ const BookmarkManager: React.FC = () => {
         ml={{ base: 0, md: '300px' }}
         p={4}
         pt={6}
+        className="bookmark-list"
       >
         <VStack spacing={4} align="stretch">
           <Tabs variant="soft-rounded" colorScheme="blue" mb={4}>
@@ -157,7 +157,6 @@ const BookmarkManager: React.FC = () => {
             onTag={handleTagOperation}
             onMove={handleMoveOperation}
             onCategory={handleCategoryOperation}
-            searchQuery={searchQuery}
             selectedTag={selectedTag}
             selectedCategory={selectedCategory}
             onTagClick={handleTagClick}

@@ -64,7 +64,8 @@ router.post('/signup', [
         user = new User({
             email,
             password,
-            aiProvider: 'openai' // Default to OpenAI
+            aiProvider: 'openai', // Default to OpenAI
+            hasCompletedTour: false // Initialize tour status
         });
 
         // Save user
@@ -90,6 +91,7 @@ router.post('/signup', [
                 openAiKey: user.openAiKey,
                 claudeKey: user.claudeKey,
                 aiProvider: user.aiProvider,
+                hasCompletedTour: user.hasCompletedTour,
                 createdAt: user.createdAt
             }
         });
@@ -149,6 +151,7 @@ router.post('/login', [
                 openAiKey: user.openAiKey,
                 claudeKey: user.claudeKey,
                 aiProvider: user.aiProvider,
+                hasCompletedTour: user.hasCompletedTour,
                 createdAt: user.createdAt
             }
         });
@@ -201,7 +204,8 @@ router.put('/profile', protect, [
     body('email').optional().isEmail().withMessage('Please provide a valid email'),
     body('openAiKey').optional().trim().notEmpty().withMessage('OpenAI API key cannot be empty if provided'),
     body('claudeKey').optional().trim().notEmpty().withMessage('Claude API key cannot be empty if provided'),
-    body('aiProvider').optional().isIn(['openai', 'claude']).withMessage('Invalid AI provider')
+    body('aiProvider').optional().isIn(['openai', 'claude']).withMessage('Invalid AI provider'),
+    body('hasCompletedTour').optional().isBoolean().withMessage('hasCompletedTour must be a boolean')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -209,12 +213,13 @@ router.put('/profile', protect, [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email, openAiKey, claudeKey, aiProvider } = req.body;
+        const { name, email, openAiKey, claudeKey, aiProvider, hasCompletedTour } = req.body;
         const updateFields = {};
 
         if (name) updateFields.name = name;
         if (openAiKey !== undefined) updateFields.openAiKey = openAiKey;
         if (claudeKey !== undefined) updateFields.claudeKey = claudeKey;
+        if (hasCompletedTour !== undefined) updateFields.hasCompletedTour = hasCompletedTour;
         if (aiProvider) {
             // Validate that the user has the required API key for the selected provider
             if (aiProvider === 'openai' && !openAiKey && !req.user.openAiKey) {

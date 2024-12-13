@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Configuration, OpenAIApi } = require('openai');
 const { protect } = require('../middleware/auth');
+const Bookmark = require('../models/Bookmark');
 
 const createOpenAIClient = (apiKey) => {
     if (!apiKey) {
@@ -13,22 +14,17 @@ const createOpenAIClient = (apiKey) => {
     return new OpenAIApi(configuration);
 };
 
+// Helper function to get recent bookmarks
+async function getRecentBookmarks(userId) {
+    return await Bookmark.find({ user: userId })
+        .select('title url tags category')
+        .sort('-createdAt')
+        .limit(10);
+}
+
 // Add auth protection to chat route
 router.post('/chat', protect, async (req, res) => {
     try {
-        // Log full request details
-        console.log('Chat request received:', { 
-            userId: req.user?.id,
-            body: {
-                hasMessage: !!req.body.message,
-                messageLength: req.body.message?.length
-            },
-            headers: {
-                authorization: req.headers.authorization ? 'Bearer token present' : 'No bearer token',
-                'content-type': req.headers['content-type']
-            }
-        });
-        
         const { message } = req.body;
         const apiKey = req.user.openAiKey;
         
@@ -48,6 +44,19 @@ router.post('/chat', protect, async (req, res) => {
             });
         }
 
+        // Get recent bookmarks
+        const recentBookmarks = await getRecentBookmarks(req.user.id);
+
+        const systemPrompt = `You are a helpful assistant that provides brief information about bookmarks. When responding:
+
+1. Keep responses short and focused
+2. Format bookmark links using markdown: [title](url)
+3. Include relevant tags as hashtags after the link
+4. Limit responses to 1-2 lines plus the bookmark links
+
+Available bookmarks:
+${recentBookmarks.map(b => `[${b.title}](${b.url}) ${b.tags.length > 0 ? '#' + b.tags.join(' #') : ''}`).join('\n')}`;
+
         const openai = createOpenAIClient(apiKey);
 
         console.log('Sending request to OpenAI...');
@@ -56,7 +65,7 @@ router.post('/chat', protect, async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful assistant that helps users with their questions and tasks."
+                    content: systemPrompt
                 },
                 {
                     role: "user",

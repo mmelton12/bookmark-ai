@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema({
         enum: ['openai', 'claude'],
         default: 'openai'
     },
+    hasCompletedTour: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

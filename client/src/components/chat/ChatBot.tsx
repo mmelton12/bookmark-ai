@@ -9,7 +9,9 @@ import {
   Flex,
   Spinner,
   Avatar,
+  Link,
 } from '@chakra-ui/react';
+import ReactMarkdown from 'react-markdown';
 import { chatAPI } from '../../services/api';
 
 interface Message {
@@ -109,7 +111,32 @@ const ChatBot: React.FC = () => {
                   mr={2}
                 />
               )}
-              <Text fontSize="sm">{message.content}</Text>
+              <Box fontSize="sm">
+                <ReactMarkdown
+                  components={{
+                    a: ({ node, ...props }) => (
+                      <Link
+                        color="blue.500"
+                        textDecoration="underline"
+                        href={props.href}
+                        isExternal
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (props.href) {
+                            window.open(props.href, '_blank');
+                          }
+                        }}
+                        {...props}
+                      />
+                    ),
+                    p: ({ node, ...props }) => (
+                      <Text {...props} />
+                    )
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </Box>
             </Flex>
           </Flex>
         ))}
