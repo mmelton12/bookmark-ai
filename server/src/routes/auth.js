@@ -2,55 +2,46 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { passport, generateCodeVerifier, generateCodeChallenge, codeVerifiers } = require('../config/passport');
+const { passport } = require('../config/passport');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
 
-// Google OAuth Routes with PKCE
-router.get('/google',
-    (req, res, next) => {
-        // Generate and store PKCE verifier
-        const codeVerifier = generateCodeVerifier();
-        const codeChallenge = generateCodeChallenge(codeVerifier);
-        
-        // Store verifier in session or temporary storage
-        req.session = req.session || {};
-        req.session.codeVerifier = codeVerifier;
-        
-        // Generate and store state parameter
-        const state = Math.random().toString(36).substring(7);
-        req.session.oauth2state = state;
-        
-        // Add PKCE and state parameters to authentication request
-        const authenticateConfig = {
-            scope: ['profile', 'email'],
-            state: state,
-            code_challenge: codeChallenge,
-            code_challenge_method: 'S256'
-        };
-        
-        passport.authenticate('google', authenticateConfig)(req, res, next);
-    }
-);
+// Enhanced Google OAuth Routes with better error handling
+router.get('/google', (req, res, next) => {
+    console.log('Starting Google OAuth flow:', {
+        clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set',
+        callbackUrl: `${process.env.SERVER_URL}/auth/google/callback`,
+        timestamp: new Date().toISOString()
+    });
+    
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        prompt: 'select_account'
+    })(req, res, next);
+});
 
 router.get('/google/callback',
     (req, res, next) => {
         console.log('Received Google callback:', {
             query: req.query,
+            error: req.query.error,
             timestamp: new Date().toISOString()
         });
 
-        // Verify state parameter
-        if (!req.query.state || req.query.state !== req.session?.oauth2state) {
-            return res.redirect(`${process.env.CLIENT_URL}/login?error=invalid_state`);
+        if (req.query.error) {
+            console.error('Google OAuth Error:', {
+                error: req.query.error,
+                errorDescription: req.query.error_description,
+                timestamp: new Date().toISOString()
+            });
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=${encodeURIComponent(req.query.error)}`);
         }
-
         next();
     },
     passport.authenticate('google', { 
         session: false,
-        failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed` 
+        failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed`
     }),
     async (req, res) => {
         try {
@@ -59,7 +50,6 @@ router.get('/google/callback',
                 timestamp: new Date().toISOString()
             });
 
-            // Token should be generated in passport strategy
             const token = req.user?.token;
             
             if (!token) {
@@ -67,13 +57,6 @@ router.get('/google/callback',
                 return res.redirect(`${process.env.CLIENT_URL}/login?error=no_token`);
             }
 
-            // Clean up session data
-            if (req.session) {
-                delete req.session.codeVerifier;
-                delete req.session.oauth2state;
-            }
-
-            // Redirect to frontend with token
             const redirectUrl = `${process.env.CLIENT_URL}/auth/callback?token=${token}`;
             console.log('Redirecting to:', redirectUrl);
             return res.redirect(redirectUrl);
