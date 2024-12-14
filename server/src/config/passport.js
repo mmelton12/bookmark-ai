@@ -3,8 +3,11 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-const SERVER_URL = process.env.SERVER_URL || 'https://api.mattymeltz.com';
-const CLIENT_URL = process.env.CLIENT_URL || 'https://mattymeltz.com';
+// Ensure required environment variables are set
+if (!process.env.SERVER_URL || !process.env.CLIENT_URL) {
+    console.error('Missing required URL configuration');
+    process.exit(1);
+}
 
 // Ensure Google OAuth configuration is properly set
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -17,7 +20,7 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: `${SERVER_URL}/auth/google/callback`,
+            callbackURL: `${process.env.SERVER_URL}/auth/google/callback`,
             proxy: true,
             scope: ['profile', 'email']
         },
